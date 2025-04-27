@@ -31,8 +31,17 @@ class Scanner:
         print("Starting scan...")
         t_scan_start = t_total_start
         tasks = []
-        for ext in ['.py', '.js', '.java', '.go', '.yaml', '.yml', '.xml', '.json', '.sh']:
+        # support wide range of file types
+        extensions = [
+            '.py', '.js', '.ts', '.tsx', '.jsx', '.java', '.c', '.cpp', '.h', '.hpp',
+            '.cs', '.go', '.rb', '.php', '.pl', '.r', '.swift', '.kt', '.kts',
+            '.scala', '.rs', '.dart', '.m', '.mm', '.lua', '.sql', '.sh', '.ps1',
+            '.bat', '.xml', '.json', '.yaml', '.yml', '.ini', '.cfg', '.toml', '.env',
+            'Dockerfile', 'Makefile', '.dockerfile', '.tf'
+        ]
+        for ext in extensions:
             for filepath in self.target_dir.rglob(f"*{ext}"):
+                print(f"Scanning scheduled: {filepath}")
                 tasks.append(self.file_scanner.scan(filepath))
         logger.debug(f"Scanner.run: created {len(tasks)} scan tasks")
         scan_results = await asyncio.gather(*tasks, return_exceptions=True)
