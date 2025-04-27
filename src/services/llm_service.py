@@ -52,6 +52,26 @@ class OpenAIService(LLMService):
         self.call_interval = 1  # seconds between requests
         self.max_retries = 3
         
+    def _fix_code_blocks(self, text: str) -> str:
+        """Ensure all code blocks are properly opened and closed."""
+        # Count backticks sequences
+        opens = len(re.findall(r'(?<!`)`{3}(?!`)', text))
+        closes = len(re.findall(r'(?<!`)`{3}(?!`)', text))
+        
+        # If unbalanced, try to fix
+        if opens != closes:
+            # If we have unclosed blocks, close them at the end
+            if opens > closes:
+                text = text.rstrip() + "\n```"
+            # If we have unopened blocks, add opening at the start
+            elif closes > opens:
+                text = "```\n" + text.lstrip()
+        
+        # Ensure each block has a language specifier or empty string
+        text = re.sub(r'```\s*\n', '```\n', text)  # Replace ```<whitespace>\n with ```\n
+        
+        return text
+        
     async def analyze_code(self, code: str, file_path: str) -> List[Vulnerability]:
         """Analyze code using OpenAI's API for vulnerabilities."""
         logger.debug(f"Analyzing code from {file_path}, length={len(code)}")
@@ -65,9 +85,19 @@ class OpenAIService(LLMService):
                 "DESCRIPTION: <detailed description>\n"
                 "SEVERITY: <CRITICAL|HIGH|MEDIUM|LOW|INFO>\n"
                 "CWE: CWE-<number>\n"
-                "LOCATION: <line numbers and code snippet>\n"
+                "LOCATION: Lines X-Y in function_name() or class_name or file scope\n"
                 "---VULNERABILITY END---\n"
-                "\nProvide only real security vulnerabilities with valid CWE IDs."
+                "\nProvide only real security vulnerabilities with valid CWE IDs.\n"
+                "For LOCATION field:\n"
+                "- ALWAYS use format 'Lines X-Y in context'\n"
+                "- For single line vulnerabilities, use same number: 'Lines 42-42 in...'\n"
+                "- For file-level issues use 'Lines 1-N in file scope'\n"
+                "- DO NOT include actual code snippets\n"
+                "- DO NOT use ranges without context\n"
+                "Examples:\n"
+                "LOCATION: Lines 45-47 in parse_json_response()\n"
+                "LOCATION: Lines 23-23 in class SecurityScanner\n"
+                "LOCATION: Lines 1-156 in file scope"
             )},
             {"role": "user", "content": (
                 f"Analyze the following code from {file_path} for security vulnerabilities. "
@@ -76,7 +106,7 @@ class OpenAIService(LLMService):
                 "2. A detailed description of the security risk\n"
                 "3. Severity level (CRITICAL for RCE/SQLi, HIGH for auth bypass/data exposure, MEDIUM for DoS/info leak, LOW for best practices)\n"
                 "4. The most relevant CWE ID (e.g., CWE-79 for XSS)\n"
-                "5. Location information with line numbers and the vulnerable code snippet\n"
+                "5. Location information in format 'Lines X-Y in function_name()' or 'Lines X-Y in file scope'\n"
                 f"```\n{code}\n```"
             )}
         ]
@@ -84,7 +114,7 @@ class OpenAIService(LLMService):
         raw_response = await self._make_api_call_with_retry(messages)
         if not raw_response:
             return []
-        
+            
         # Parse vulnerabilities from the text response
         vulnerabilities = []
         findings = raw_response.split("---VULNERABILITY START---")
@@ -102,41 +132,48 @@ class OpenAIService(LLMService):
                     logger.warning(f"Skipping finding with missing fields: {finding}")
                     continue
                 
-                # Parse location information
-                loc_text = loc_match.group(1)
-                # Try to extract line numbers and snippet
-                line_match = re.search(r"lines?\s*:?\s*(\d+)(?:\s*-\s*(\d+))?", loc_text, re.IGNORECASE)
-                if line_match:
-                    start_line = int(line_match.group(1))
-                    end_line = int(line_match.group(2)) if line_match.group(2) else start_line
-                else:
-                    # If no line numbers found, try to find the snippet in the code
-                    snippet = re.sub(r".*\n", "", loc_text).strip()  # Get last line as snippet
-                    for idx, line in enumerate(code.splitlines(), start=1):
-                        if snippet and snippet in line:
-                            start_line = end_line = idx
-                            break
-                    else:
-                        logger.warning(f"Could not find line numbers for snippet: {snippet}")
-                        continue
+                # Parse location information with more robust pattern matching
+                loc_text = loc_match.group(1).strip()
                 
-                # Create vulnerability object
-                try:
-                    severity = Severity[sev_match.group(1)]
-                except KeyError:
-                    severity = Severity.MEDIUM
+                # Try different location patterns
+                line_match = None
+                
+                # Pattern 1: Standard format "Lines X-Y in context"
+                if not line_match:
+                    line_match = re.search(r"Lines?\s*(\d+)(?:\s*-\s*(\d+))?\s+in\s+(.+)", loc_text, re.IGNORECASE)
+                
+                # Pattern 2: Just line numbers at start "Lines X-Y" or "Line X"
+                if not line_match:
+                    line_match = re.search(r"Lines?\s*(\d+)(?:\s*-\s*(\d+))?", loc_text, re.IGNORECASE)
+                    if line_match:
+                        context = "file scope"  # Default context if none provided
+                    else:
+                        context = None
+                
+                if not line_match:
+                    logger.warning(f"Could not parse location format: {loc_text}")
+                    continue
                     
+                start_line = int(line_match.group(1))
+                end_line = int(line_match.group(2)) if line_match.group(2) else start_line
+                context = line_match.group(3).strip() if len(line_match.groups()) > 2 and line_match.group(3) else "file scope"
+                
+                # Validate line numbers
+                if start_line < 1 or end_line < start_line:
+                    logger.warning(f"Invalid line numbers in location: {loc_text}")
+                    continue
+                
                 location = CodeLocation(
                     file_path=file_path,
                     start_line=start_line,
                     end_line=end_line,
-                    snippet=loc_text.strip()
+                    snippet=f"Lines {start_line}-{end_line} in {context}"
                 )
                 
                 vuln = Vulnerability(
                     title=title_match.group(1).strip(),
                     description=desc_match.group(1).strip(),
-                    severity=severity,
+                    severity=Severity[sev_match.group(1)],
                     location=location,
                     cwe_id=f"CWE-{cwe_match.group(1)}"
                 )
@@ -166,7 +203,8 @@ class OpenAIService(LLMService):
                 "---FIX END---\n"
                 "---RECOMMENDATIONS START---\n"
                 "<additional security recommendations>\n"
-                "---RECOMMENDATIONS END---"
+                "---RECOMMENDATIONS END---\n\n"
+                "When including code examples, always use proper markdown code blocks with triple backticks."
             )},
             {"role": "user", "content": (
                 f"For the vulnerability titled '{vulnerability.title}' ({vulnerability.cwe_id}), "
@@ -184,15 +222,18 @@ class OpenAIService(LLMService):
         if not response:
             return vulnerability
             
+        # Fix any broken code blocks in the response
+        response = self._fix_code_blocks(response)
+            
         # Parse sections using regex
         poc_match = re.search(r"---POC START---\n(.*?)\n---POC END---", response, re.DOTALL)
         fix_match = re.search(r"---FIX START---\n(.*?)\n---FIX END---", response, re.DOTALL)
         rec_match = re.search(r"---RECOMMENDATIONS START---\n(.*?)\n---RECOMMENDATIONS END---", response, re.DOTALL)
         
-        # Store the enrichment data
-        vulnerability.proof_of_concept = poc_match.group(1).strip() if poc_match else ''
-        vulnerability.fix = fix_match.group(1).strip() if fix_match else ''
-        vulnerability.recommendation = rec_match.group(1).strip() if rec_match else ''
+        # Store the enrichment data, fixing code blocks in each section
+        vulnerability.proof_of_concept = self._fix_code_blocks(poc_match.group(1).strip()) if poc_match else ''
+        vulnerability.fix = self._fix_code_blocks(fix_match.group(1).strip()) if fix_match else ''
+        vulnerability.recommendation = self._fix_code_blocks(rec_match.group(1).strip()) if rec_match else ''
             
         return vulnerability
             
