@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class GPTClient:
     def __init__(self, api_key: str, concurrency: int):
-        openai.api_key = api_key
+        self.client = openai.OpenAI(api_key=api_key)
         self.semaphore = asyncio.Semaphore(concurrency)
         self.last_call = 0
         self.call_interval = 1  # seconds between requests
