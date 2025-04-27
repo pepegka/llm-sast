@@ -1,0 +1,27 @@
+# OpenAI Configuration
+openai:
+  # API base URL (leave empty to use default OpenAI API URL)
+  api_base_url: ""
+  # API key (will be overridden by OPENAI_API_KEY environment variable if present)
+  api_key: ""
+  # Model to use for analysis
+  model: ""
+  # Timeout for API calls in seconds
+  timeout: 30
+  # Maximum concurrent API calls
+  max_concurrent_calls: 1
+
+# Scanner Configuration
+scanner:
+  # Maximum file size to analyze (in bytes)
+  max_file_size: 1048576  # 1MB
+  # Patterns to exclude from scanning
+  excluded_patterns:
+    - "**/.git/**"
+    - "**/node_modules/**"
+    - "**/venv/**"
+    - "**/__pycache__/**"
+    - "**/*.pyc"
+    - "**/*.min.js"
+  # Default logging level
+  log_level: "INFO" 
