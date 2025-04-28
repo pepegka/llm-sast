@@ -25,14 +25,15 @@ class LLMService(ABC):
 class OllamaService(LLMService):
     """Ollama implementation of the LLM service for local models."""
     
-    def __init__(self, config: Dict[str, Any], model_name: str):
+    def __init__(self, config: Dict[str, Any], model_name: Optional[str] = None):
         """
-        Initialize the OpenAI service with configuration.
+        Initialize the Ollama service with configuration.
         
         Args:
-            config: Configuration dictionary containing OpenAI settings
+            config: Configuration dictionary containing Ollama settings
+            model_name: Optional explicit model name; overrides config['model_name'] if provided
         """
-        self.model_name = model_name
+        self.model_name = model_name or config.get("model_name", "llama2")
         self.timeout = config.get("timeout", 30)
         self.semaphore = asyncio.Semaphore(config.get("max_concurrent_calls", 5))
         self.last_call = 0
