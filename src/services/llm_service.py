@@ -76,6 +76,11 @@ class OpenAIService(LLMService):
         """Analyze code using OpenAI's API for vulnerabilities."""
         logger.debug(f"Analyzing code from {file_path}, length={len(code)}")
         
+        # Add line numbers to the code
+        lines = code.splitlines()
+        numbered_code = "\n".join(f"{i+1:4d} | {line}" for i, line in enumerate(lines))
+        total_lines = len(lines)
+        
         messages = [
             {"role": "system", "content": (
                 "You are a security analyst specialized in static code analysis. "
@@ -94,6 +99,9 @@ class OpenAIService(LLMService):
                 "- For file-level issues use 'Lines 1-N in file scope'\n"
                 "- DO NOT include actual code snippets\n"
                 "- DO NOT use ranges without context\n"
+                "- IMPORTANT: The code is shown with line numbers. Use these exact numbers in your response.\n"
+                "- IMPORTANT: The file has {total_lines} total lines. Ensure your line numbers are within this range.\n"
+                "- IMPORTANT: Line numbers are shown as '1234 | code'. Use the number before the | symbol.\n"
                 "Examples:\n"
                 "LOCATION: Lines 45-47 in parse_json_response()\n"
                 "LOCATION: Lines 23-23 in class SecurityScanner\n"
@@ -107,7 +115,8 @@ class OpenAIService(LLMService):
                 "3. Severity level (CRITICAL for RCE/SQLi, HIGH for auth bypass/data exposure, MEDIUM for DoS/info leak, LOW for best practices)\n"
                 "4. The most relevant CWE ID (e.g., CWE-79 for XSS)\n"
                 "5. Location information in format 'Lines X-Y in function_name()' or 'Lines X-Y in file scope'\n"
-                f"```\n{code}\n```"
+                "IMPORTANT: The code is shown with line numbers. Use these exact numbers in your response.\n"
+                f"```\n{numbered_code}\n```"
             )}
         ]
         
@@ -158,16 +167,20 @@ class OpenAIService(LLMService):
                 end_line = int(line_match.group(2)) if line_match.group(2) else start_line
                 context = line_match.group(3).strip() if len(line_match.groups()) > 2 and line_match.group(3) else "file scope"
                 
-                # Validate line numbers
-                if start_line < 1 or end_line < start_line:
-                    logger.warning(f"Invalid line numbers in location: {loc_text}")
+                # Validate line numbers against file bounds
+                if start_line < 1 or end_line < start_line or end_line > total_lines:
+                    logger.warning(f"Invalid line numbers in location: {loc_text} (file has {total_lines} lines)")
                     continue
+                
+                # Get the actual code snippet for the location
+                snippet_lines = lines[start_line-1:end_line]
+                snippet = "\n".join(f"{i+start_line:4d} | {line}" for i, line in enumerate(snippet_lines))
                 
                 location = CodeLocation(
                     file_path=file_path,
                     start_line=start_line,
                     end_line=end_line,
-                    snippet=f"Lines {start_line}-{end_line} in {context}"
+                    snippet=snippet
                 )
                 
                 vuln = Vulnerability(
