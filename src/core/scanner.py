@@ -3,7 +3,7 @@ import logging
 from typing import List, Optional, Dict, Any
 from ..models.config import ScannerConfig
 from ..models.vulnerability import Vulnerability
-from ..services.llm_service import LLMService, OpenAIService
+from ..services.llm_service import LLMService, OllamaService
 from ..services.file_service import FileService
 from ..reporters.base_reporter import BaseReporter
 from ..reporters.json_reporter import JSONReporter
@@ -22,7 +22,7 @@ class Scanner:
             openai_config: OpenAI configuration dictionary
         """
         self.config = config
-        self.llm_service = OpenAIService({"openai": openai_config})
+        self.llm_service = OllamaService({"ollama": openai_config})
         self.file_service = FileService(config=config)
         # Initialize both reporters
         self.reporters = [
