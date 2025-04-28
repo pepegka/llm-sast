@@ -61,7 +61,7 @@ def main():
                 target_dir=Path(args.target_dir),
                 output_dir=Path(args.output_dir),
                 concurrency=config["openai"].get("max_concurrent_calls", 5),
-                api_key=config["openai"]["api_key"] if service_type == "openai" else None,
+                api_key=config["openai"]["api_key"] if service_type == "openai" else "",
                 log_level=args.log_level,
                 timeout=config["openai"].get("timeout", 30),
                 max_file_size=config["scanner"].get("max_file_size", 1024 * 1024),
