@@ -75,10 +75,7 @@ def main():
             )
             
             # Create and run scanner with Ollama service
-            ollama_service = OllamaService(
-                config=config["ollama"],
-                model_name=model_name
-            )
+            ollama_service = OllamaService(config["ollama"], model_name)
             scanner = Scanner(
                 config=scanner_config,
                 openai_config=ollama_service
