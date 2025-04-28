@@ -61,7 +61,8 @@ def main():
         elif service_type == "ollama":
             # Create scanner configuration for Ollama
             if "ollama" not in config:
-                raise ValueError("Configuration for 'ollama' service is missing.")
+                logger.error("Configuration for 'ollama' service is missing. Please ensure the configuration file includes the necessary settings for the 'ollama' service.")
+                exit(1)
             
             scanner_config = ScannerConfig(
                 target_dir=Path(args.target_dir),
