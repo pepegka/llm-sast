@@ -68,6 +68,7 @@ def main():
                 target_dir=Path(args.target_dir),
                 output_dir=Path(args.output_dir),
                 concurrency=config["ollama"].get("max_concurrent_calls", 5),
+                api_key=None,  # No API key required for Ollama
                 log_level=args.log_level,
                 timeout=config["ollama"].get("timeout", 30),
                 max_file_size=config["scanner"].get("max_file_size", 1024 * 1024),
