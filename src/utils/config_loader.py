@@ -55,7 +55,8 @@ class ConfigLoader:
             config["openai"]["model"] = model
             
         # Validate configuration
-        cls._validate_config(config)
+        if config.get("openai"):
+            cls._validate_config(config)
         
         return config
         
