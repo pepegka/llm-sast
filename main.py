@@ -55,20 +55,17 @@ def main():
                 openai_config=config["ollama"],
                 model_name=model_name
             )
-        else:
+        elif service_type == "openai":
             # Create scanner configuration for OpenAI
-            if service_type == "openai":
-                api_key = config["openai"]["api_key"]
-            else:
-                api_key = ""
+            api_key = config["openai"]["api_key"]
 
             scanner_config = ScannerConfig(
                 target_dir=Path(args.target_dir),
                 output_dir=Path(args.output_dir),
-                concurrency=config[service_type].get("max_concurrent_calls", 5),
+                concurrency=config["openai"].get("max_concurrent_calls", 5),
                 api_key=api_key,
                 log_level=args.log_level,
-                timeout=config[service_type].get("timeout", 30),
+                timeout=config["openai"].get("timeout", 30),
                 max_file_size=config["scanner"].get("max_file_size", 1024 * 1024),
                 excluded_patterns=config["scanner"].get("excluded_patterns", None)
             )
