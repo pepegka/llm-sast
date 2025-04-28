@@ -86,21 +86,19 @@ class ConfigLoader:
         Raises:
             ConfigurationError: If configuration is invalid
         """
-        # Check required OpenAI settings
-        if not config.get("openai"):
-            raise ConfigurationError("OpenAI configuration section is missing")
-            
-        openai_config = config["openai"]
-        if not openai_config.get("api_key"):
-            raise ConfigurationError("OpenAI API key is not set")
-            
-        # Validate model name
-        if not openai_config.get("model"):
-            raise ConfigurationError("OpenAI model name is not set")
-            
-        # Validate numeric values
-        if not isinstance(openai_config.get("timeout", 30), (int, float)):
-            raise ConfigurationError("OpenAI timeout must be a number")
-            
-        if not isinstance(openai_config.get("max_concurrent_calls", 5), int):
-            raise ConfigurationError("OpenAI max_concurrent_calls must be an integer") 
+        if config.get("openai"):
+            # Check required OpenAI settings
+            openai_config = config["openai"]
+            if not openai_config.get("api_key"):
+                raise ConfigurationError("OpenAI API key is not set")
+                
+            # Validate model name
+            if not openai_config.get("model"):
+                raise ConfigurationError("OpenAI model name is not set")
+                
+            # Validate numeric values
+            if not isinstance(openai_config.get("timeout", 30), (int, float)):
+                raise ConfigurationError("OpenAI timeout must be a number")
+                
+            if not isinstance(openai_config.get("max_concurrent_calls", 5), int):
+                raise ConfigurationError("OpenAI max_concurrent_calls must be an integer")
