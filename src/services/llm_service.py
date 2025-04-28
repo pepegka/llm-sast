@@ -206,7 +206,7 @@ class OllamaService(LLMService):
             )}
         ]
         
-        response = await self._make_api_call_with_retry(messages)
+        response = await self._ask_model_with_retries(messages)
         if not response:
             return vulnerability
             
