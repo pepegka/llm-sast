@@ -7,6 +7,7 @@ from src.models.config import ScannerConfig
 from src.core.scanner import Scanner
 from src.utils.config_loader import ConfigLoader
 from src.services.llm_service import OllamaService
+from src.utils.logger import setup_logger
 
 def main():
     """Main entry point for the SAST scanner."""
