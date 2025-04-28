@@ -3,9 +3,11 @@ import asyncio
 import json
 import re
 import logging
+import time
 from typing import List, Optional, Dict, Any
 import openai
 from ..models.vulnerability import Vulnerability, CodeLocation, Severity
+from ..utils.exceptions import LLMServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,55 @@ class OpenAIService(LLMService):
         self.last_call = 0
         self.call_interval = 1  # seconds between requests
         self.max_retries = 3
+        self.retry_delay = 2  # seconds between retries
+        self.logger = logging.getLogger("llm_sast.llm_service")
+        
+    async def _make_api_call_with_retry(self, messages: List[Dict]) -> Optional[str]:
+        """Make an API call with retry logic and rate limiting."""
+        for attempt in range(self.max_retries):
+            try:
+                # Rate limiting
+                now = time.time()
+                time_since_last_call = now - self.last_call
+                if time_since_last_call < self.call_interval:
+                    await asyncio.sleep(self.call_interval - time_since_last_call)
+                
+                async with self.semaphore:
+                    self.last_call = time.time()
+                    # Use synchronous API call since OpenAI client is not async
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=messages,
+                        temperature=0.1
+                    )
+                    
+                    if not response.choices:
+                        raise LLMServiceError("No response from OpenAI API")
+                        
+                    return response.choices[0].message.content
+                    
+            except openai.RateLimitError as e:
+                if attempt < self.max_retries - 1:
+                    self.logger.warning(f"Rate limit hit, retrying in {self.retry_delay} seconds...")
+                    await asyncio.sleep(self.retry_delay)
+                    self.retry_delay *= 2  # Exponential backoff
+                else:
+                    self.logger.error(f"Rate limit error after {self.max_retries} attempts: {str(e)}")
+                    raise
+                    
+            except openai.APIError as e:
+                if attempt < self.max_retries - 1:
+                    self.logger.warning(f"API error, retrying in {self.retry_delay} seconds...")
+                    await asyncio.sleep(self.retry_delay)
+                else:
+                    self.logger.error(f"API error after {self.max_retries} attempts: {str(e)}")
+                    raise
+                    
+            except Exception as e:
+                self.logger.error(f"Unexpected error during API call: {str(e)}")
+                raise
+                
+        return None
         
     def _fix_code_blocks(self, text: str) -> str:
         """Ensure all code blocks are properly opened and closed."""
@@ -74,7 +125,7 @@ class OpenAIService(LLMService):
         
     async def analyze_code(self, code: str, file_path: str) -> List[Vulnerability]:
         """Analyze code using OpenAI's API for vulnerabilities."""
-        logger.debug(f"Analyzing code from {file_path}, length={len(code)}")
+        self.logger.debug(f"Analyzing code from {file_path}, length={len(code)}")
         
         # Add line numbers to the code
         lines = code.splitlines()
@@ -120,87 +171,92 @@ class OpenAIService(LLMService):
             )}
         ]
         
-        raw_response = await self._make_api_call_with_retry(messages)
-        if not raw_response:
-            return []
+        try:
+            raw_response = await self._make_api_call_with_retry(messages)
+            if not raw_response:
+                return []
+                
+            # Parse vulnerabilities from the text response
+            vulnerabilities = []
+            findings = raw_response.split("---VULNERABILITY START---")
             
-        # Parse vulnerabilities from the text response
-        vulnerabilities = []
-        findings = raw_response.split("---VULNERABILITY START---")
-        
-        for finding in findings[1:]:  # Skip the first split which is empty
-            try:
-                # Extract fields using regex
-                title_match = re.search(r"TITLE:\s*(.+?)(?:\n|$)", finding)
-                desc_match = re.search(r"DESCRIPTION:\s*(.+?)(?:\n(?=SEVERITY:|CWE:|LOCATION:|---|$))", finding, re.DOTALL)
-                sev_match = re.search(r"SEVERITY:\s*(CRITICAL|HIGH|MEDIUM|LOW|INFO)", finding)
-                cwe_match = re.search(r"CWE:\s*CWE-(\d+)", finding)
-                loc_match = re.search(r"LOCATION:\s*(.+?)(?:\n(?=---|$)|$)", finding, re.DOTALL)
-                
-                if not all([title_match, desc_match, sev_match, cwe_match, loc_match]):
-                    logger.warning(f"Skipping finding with missing fields: {finding}")
-                    continue
-                
-                # Parse location information with more robust pattern matching
-                loc_text = loc_match.group(1).strip()
-                
-                # Try different location patterns
-                line_match = None
-                
-                # Pattern 1: Standard format "Lines X-Y in context"
-                if not line_match:
-                    line_match = re.search(r"Lines?\s*(\d+)(?:\s*-\s*(\d+))?\s+in\s+(.+)", loc_text, re.IGNORECASE)
-                
-                # Pattern 2: Just line numbers at start "Lines X-Y" or "Line X"
-                if not line_match:
-                    line_match = re.search(r"Lines?\s*(\d+)(?:\s*-\s*(\d+))?", loc_text, re.IGNORECASE)
-                    if line_match:
-                        context = "file scope"  # Default context if none provided
-                    else:
-                        context = None
-                
-                if not line_match:
-                    logger.warning(f"Could not parse location format: {loc_text}")
-                    continue
+            for finding in findings[1:]:  # Skip the first split which is empty
+                try:
+                    # Extract fields using regex
+                    title_match = re.search(r"TITLE:\s*(.+?)(?:\n|$)", finding)
+                    desc_match = re.search(r"DESCRIPTION:\s*(.+?)(?:\n(?=SEVERITY:|CWE:|LOCATION:|---|$))", finding, re.DOTALL)
+                    sev_match = re.search(r"SEVERITY:\s*(CRITICAL|HIGH|MEDIUM|LOW|INFO)", finding)
+                    cwe_match = re.search(r"CWE:\s*CWE-(\d+)", finding)
+                    loc_match = re.search(r"LOCATION:\s*(.+?)(?:\n(?=---|$)|$)", finding, re.DOTALL)
                     
-                start_line = int(line_match.group(1))
-                end_line = int(line_match.group(2)) if line_match.group(2) else start_line
-                context = line_match.group(3).strip() if len(line_match.groups()) > 2 and line_match.group(3) else "file scope"
-                
-                # Validate line numbers against file bounds
-                if start_line < 1 or end_line < start_line or end_line > total_lines:
-                    logger.warning(f"Invalid line numbers in location: {loc_text} (file has {total_lines} lines)")
+                    if not all([title_match, desc_match, sev_match, cwe_match, loc_match]):
+                        self.logger.warning(f"Skipping finding with missing fields: {finding}")
+                        continue
+                    
+                    # Parse location information with more robust pattern matching
+                    loc_text = loc_match.group(1).strip()
+                    
+                    # Try different location patterns
+                    line_match = None
+                    
+                    # Pattern 1: Standard format "Lines X-Y in context"
+                    if not line_match:
+                        line_match = re.search(r"Lines?\s*(\d+)(?:\s*-\s*(\d+))?\s+in\s+(.+)", loc_text, re.IGNORECASE)
+                    
+                    # Pattern 2: Just line numbers at start "Lines X-Y" or "Line X"
+                    if not line_match:
+                        line_match = re.search(r"Lines?\s*(\d+)(?:\s*-\s*(\d+))?", loc_text, re.IGNORECASE)
+                        if line_match:
+                            context = "file scope"  # Default context if none provided
+                        else:
+                            context = None
+                    
+                    if not line_match:
+                        self.logger.warning(f"Could not parse location format: {loc_text}")
+                        continue
+                        
+                    start_line = int(line_match.group(1))
+                    end_line = int(line_match.group(2)) if line_match.group(2) else start_line
+                    context = line_match.group(3).strip() if len(line_match.groups()) > 2 and line_match.group(3) else "file scope"
+                    
+                    # Validate line numbers against file bounds
+                    if start_line < 1 or end_line < start_line or end_line > total_lines:
+                        self.logger.warning(f"Invalid line numbers in location: {loc_text} (file has {total_lines} lines)")
+                        continue
+                    
+                    # Get the actual code snippet for the location
+                    snippet_lines = lines[start_line-1:end_line]
+                    snippet = "\n".join(f"{i+start_line:4d} | {line}" for i, line in enumerate(snippet_lines))
+                    
+                    location = CodeLocation(
+                        file_path=file_path,
+                        start_line=start_line,
+                        end_line=end_line,
+                        snippet=snippet
+                    )
+                    
+                    vuln = Vulnerability(
+                        title=title_match.group(1).strip(),
+                        description=desc_match.group(1).strip(),
+                        severity=Severity[sev_match.group(1)],
+                        location=location,
+                        cwe_id=f"CWE-{cwe_match.group(1)}"
+                    )
+                    vulnerabilities.append(vuln)
+                    
+                except Exception as e:
+                    self.logger.error(f"Error parsing finding: {e}")
                     continue
-                
-                # Get the actual code snippet for the location
-                snippet_lines = lines[start_line-1:end_line]
-                snippet = "\n".join(f"{i+start_line:4d} | {line}" for i, line in enumerate(snippet_lines))
-                
-                location = CodeLocation(
-                    file_path=file_path,
-                    start_line=start_line,
-                    end_line=end_line,
-                    snippet=snippet
-                )
-                
-                vuln = Vulnerability(
-                    title=title_match.group(1).strip(),
-                    description=desc_match.group(1).strip(),
-                    severity=Severity[sev_match.group(1)],
-                    location=location,
-                    cwe_id=f"CWE-{cwe_match.group(1)}"
-                )
-                vulnerabilities.append(vuln)
-                
-            except Exception as e:
-                logger.error(f"Error parsing finding: {e}")
-                continue
-        
-        return vulnerabilities
+            
+            return vulnerabilities
+            
+        except Exception as e:
+            self.logger.error(f"Error analyzing code: {str(e)}")
+            return []
             
     async def enrich_finding(self, vulnerability: Vulnerability) -> Vulnerability:
         """Enrich a vulnerability finding with additional context for markdown report."""
-        logger.debug(f"Enriching vulnerability: {vulnerability.title}")
+        self.logger.debug(f"Enriching vulnerability: {vulnerability.title}")
         
         messages = [
             {"role": "system", "content": (
@@ -231,57 +287,26 @@ class OpenAIService(LLMService):
             )}
         ]
         
-        response = await self._make_api_call_with_retry(messages)
-        if not response:
+        try:
+            response = await self._make_api_call_with_retry(messages)
+            if not response:
+                return vulnerability
+                
+            # Fix any broken code blocks in the response
+            response = self._fix_code_blocks(response)
+                
+            # Parse sections using regex
+            poc_match = re.search(r"---POC START---\n(.*?)\n---POC END---", response, re.DOTALL)
+            fix_match = re.search(r"---FIX START---\n(.*?)\n---FIX END---", response, re.DOTALL)
+            rec_match = re.search(r"---RECOMMENDATIONS START---\n(.*?)\n---RECOMMENDATIONS END---", response, re.DOTALL)
+            
+            # Store the enrichment data, fixing code blocks in each section
+            vulnerability.proof_of_concept = self._fix_code_blocks(poc_match.group(1).strip()) if poc_match else ''
+            vulnerability.fix = self._fix_code_blocks(fix_match.group(1).strip()) if fix_match else ''
+            vulnerability.recommendation = self._fix_code_blocks(rec_match.group(1).strip()) if rec_match else ''
+            
             return vulnerability
             
-        # Fix any broken code blocks in the response
-        response = self._fix_code_blocks(response)
-            
-        # Parse sections using regex
-        poc_match = re.search(r"---POC START---\n(.*?)\n---POC END---", response, re.DOTALL)
-        fix_match = re.search(r"---FIX START---\n(.*?)\n---FIX END---", response, re.DOTALL)
-        rec_match = re.search(r"---RECOMMENDATIONS START---\n(.*?)\n---RECOMMENDATIONS END---", response, re.DOTALL)
-        
-        # Store the enrichment data, fixing code blocks in each section
-        vulnerability.proof_of_concept = self._fix_code_blocks(poc_match.group(1).strip()) if poc_match else ''
-        vulnerability.fix = self._fix_code_blocks(fix_match.group(1).strip()) if fix_match else ''
-        vulnerability.recommendation = self._fix_code_blocks(rec_match.group(1).strip()) if rec_match else ''
-            
-        return vulnerability
-            
-    async def _make_api_call_with_retry(self, messages: List[Dict]) -> Optional[str]:
-        """Make an API call to OpenAI with retry logic."""
-        async with self.semaphore:
-            # Throttle to avoid rate limit
-            now = asyncio.get_event_loop().time()
-            wait = self.call_interval - (now - self.last_call)
-            if wait > 0:
-                await asyncio.sleep(wait)
-                
-            # Retry on rate limits
-            for attempt in range(self.max_retries):
-                try:
-                    response = await asyncio.to_thread(
-                        self.client.chat.completions.create,
-                        model=self.model,
-                        messages=messages,
-                        temperature=0.1
-                    )
-                    self.last_call = asyncio.get_event_loop().time()
-                    
-                    # Return raw text response
-                    return response.choices[0].message.content.strip()
-                        
-                except Exception as e:
-                    status = getattr(e, 'http_status', None) or getattr(e, 'status_code', None)
-                    if status == 429 and attempt < self.max_retries - 1:
-                        backoff = 2 ** attempt
-                        logger.warning(f"Rate limit (429), retrying in {backoff}s (attempt {attempt+1})")
-                        await asyncio.sleep(backoff)
-                        continue
-                    logger.error(f"API call failed: {str(e)}")
-                    return None
-                    
-            logger.error("Max retries reached for API call")
-            return None 
+        except Exception as e:
+            self.logger.error(f"Error enriching vulnerability: {str(e)}")
+            return vulnerability 
