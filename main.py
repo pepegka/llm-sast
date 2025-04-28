@@ -81,7 +81,7 @@ def main():
             )
             scanner = Scanner(
                 config=scanner_config,
-                openai_config=config["ollama"]
+                openai_config=ollama_service
             )
         asyncio.run(scanner.run())
         
