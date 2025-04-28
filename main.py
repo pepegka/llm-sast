@@ -17,7 +17,10 @@ def main():
     parser.add_argument("--env-file", "-e", help="Path to environment file")
     parser.add_argument("--log-level", "-l", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
                       help="Set the logging level")
+    parser.add_argument("--model", "-m", default="hengwen/DeepSeek-R1-Distill-Qwen-32B:q4_k_m", 
+                        help="Name of the model to use (default: DeepSeek-R1-Distill-Qwen-32B:q4_k_m)")
     args = parser.parse_args()
+    model_name = args.model
     
     # Setup logging
     setup_logger("llm_sast", args.log_level)
@@ -45,7 +48,8 @@ def main():
         # Create and run scanner with both configs
         scanner = Scanner(
             config=scanner_config,
-            openai_config=config["openai"]
+            openai_config=config["openai"],
+            model_name=model_name
         )
         asyncio.run(scanner.run())
         

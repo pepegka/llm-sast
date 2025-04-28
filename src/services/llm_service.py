@@ -4,7 +4,7 @@ import json
 import re
 import logging
 from typing import List, Optional, Dict, Any
-import openai
+import ollama
 from ..models.vulnerability import Vulnerability, CodeLocation, Severity
 
 logger = logging.getLogger(__name__)
@@ -22,32 +22,19 @@ class LLMService(ABC):
         """Enrich a vulnerability finding with additional context."""
         pass
 
-class OpenAIService(LLMService):
-    """OpenAI implementation of the LLM service."""
+class OllamaService(LLMService):
+    """Ollama implementation of the LLM service for local models."""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], model_name: str):
         """
         Initialize the OpenAI service with configuration.
         
         Args:
             config: Configuration dictionary containing OpenAI settings
         """
-        openai_config = config["openai"]
-        
-        # Initialize OpenAI client with configuration
-        client_kwargs = {
-            "api_key": openai_config["api_key"],
-            "timeout": openai_config.get("timeout", 30)
-        }
-        
-        # Add custom API base URL if provided
-        if openai_config.get("api_base_url"):
-            client_kwargs["base_url"] = openai_config["api_base_url"]
-            
-        self.client = openai.OpenAI(**client_kwargs)
-        self.model = openai_config.get("model", "gpt-4")
-        self.timeout = openai_config.get("timeout", 30)
-        self.semaphore = asyncio.Semaphore(openai_config.get("max_concurrent_calls", 5))
+        self.model_name = model_name
+        self.timeout = config.get("timeout", 30)
+        self.semaphore = asyncio.Semaphore(config.get("max_concurrent_calls", 5))
         self.last_call = 0
         self.call_interval = 1  # seconds between requests
         self.max_retries = 3
@@ -111,7 +98,7 @@ class OpenAIService(LLMService):
             )}
         ]
         
-        raw_response = await self._make_api_call_with_retry(messages)
+        raw_response = await self._ask_model_with_retries(messages)
         if not raw_response:
             return []
             
@@ -237,8 +224,8 @@ class OpenAIService(LLMService):
             
         return vulnerability
             
-    async def _make_api_call_with_retry(self, messages: List[Dict]) -> Optional[str]:
-        """Make an API call to OpenAI with retry logic."""
+    async def _ask_model_with_retries(self, messages: List[Dict]) -> Optional[str]:
+        """Send a prompt to the local LLM via Ollama with retry logic."""
         async with self.semaphore:
             # Throttle to avoid rate limit
             now = asyncio.get_event_loop().time()
@@ -249,16 +236,9 @@ class OpenAIService(LLMService):
             # Retry on rate limits
             for attempt in range(self.max_retries):
                 try:
-                    response = await asyncio.to_thread(
-                        self.client.chat.completions.create,
-                        model=self.model,
-                        messages=messages,
-                        temperature=0.1
-                    )
+                    response = ollama.chat(model=self.model_name, messages=messages)
                     self.last_call = asyncio.get_event_loop().time()
-                    
-                    # Return raw text response
-                    return response.choices[0].message.content.strip()
+                    return response.get("message", {}).get("content", "").strip()
                         
                 except Exception as e:
                     status = getattr(e, 'http_status', None) or getattr(e, 'status_code', None)
