@@ -55,8 +55,7 @@ def main():
             # Create and run scanner with OpenAI service
             scanner = Scanner(
                 config=scanner_config,
-                openai_config=config["openai"],
-                model_name=model_name
+                openai_config=config["openai"]
             )
         elif service_type == "ollama":
             # Create scanner configuration for Ollama
@@ -78,8 +77,7 @@ def main():
             # Create and run scanner with Ollama service
             scanner = Scanner(
                 config=scanner_config,
-                openai_config=config["ollama"],
-                model_name=model_name
+                openai_config=config["ollama"]
             )
         asyncio.run(scanner.run())
         
