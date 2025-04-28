@@ -6,7 +6,7 @@ from pathlib import Path
 from src.models.config import ScannerConfig
 from src.core.scanner import Scanner
 from src.utils.config_loader import ConfigLoader
-from src.utils.logger import setup_logger
+from src.services.llm_service import OllamaService
 
 def main():
     """Main entry point for the SAST scanner."""
@@ -19,7 +19,10 @@ def main():
                       help="Set the logging level")
     parser.add_argument("--model", "-m", default="hengwen/DeepSeek-R1-Distill-Qwen-32B:q4_k_m", 
                         help="Name of the model to use (default: DeepSeek-R1-Distill-Qwen-32B:q4_k_m)")
+    parser.add_argument("--service", "-s", default="openai", choices=["openai", "ollama"],
+                        help="Service to use for scanning (default: openai)")
     args = parser.parse_args()
+    service_type = args.service
     model_name = args.model
     
     # Setup logging
@@ -33,24 +36,43 @@ def main():
             env_file=Path(args.env_file) if args.env_file else None
         )
         
-        # Create scanner configuration
-        scanner_config = ScannerConfig(
-            target_dir=Path(args.target_dir),
-            output_dir=Path(args.output_dir),
-            concurrency=config["openai"].get("max_concurrent_calls", 5),
-            api_key=config["openai"]["api_key"],
-            log_level=args.log_level,
-            timeout=config["openai"].get("timeout", 30),
-            max_file_size=config["scanner"].get("max_file_size", 1024 * 1024),
-            excluded_patterns=config["scanner"].get("excluded_patterns", None)
-        )
-        
-        # Create and run scanner with both configs
-        scanner = Scanner(
-            config=scanner_config,
-            openai_config=config["openai"],
-            model_name=model_name
-        )
+        if service_type == "ollama":
+            # Create scanner configuration for Ollama
+            scanner_config = ScannerConfig(
+                target_dir=Path(args.target_dir),
+                output_dir=Path(args.output_dir),
+                concurrency=config["ollama"].get("max_concurrent_calls", 5),
+                log_level=args.log_level,
+                timeout=config["ollama"].get("timeout", 30),
+                max_file_size=config["scanner"].get("max_file_size", 1024 * 1024),
+                excluded_patterns=config["scanner"].get("excluded_patterns", None)
+            )
+            
+            # Create and run scanner with Ollama service
+            scanner = Scanner(
+                config=scanner_config,
+                openai_config=config["ollama"],
+                model_name=model_name
+            )
+        else:
+            # Create scanner configuration for OpenAI
+            scanner_config = ScannerConfig(
+                target_dir=Path(args.target_dir),
+                output_dir=Path(args.output_dir),
+                concurrency=config["openai"].get("max_concurrent_calls", 5),
+                api_key=config["openai"]["api_key"],
+                log_level=args.log_level,
+                timeout=config["openai"].get("timeout", 30),
+                max_file_size=config["scanner"].get("max_file_size", 1024 * 1024),
+                excluded_patterns=config["scanner"].get("excluded_patterns", None)
+            )
+            
+            # Create and run scanner with OpenAI service
+            scanner = Scanner(
+                config=scanner_config,
+                openai_config=config["openai"],
+                model_name=model_name
+            )
         asyncio.run(scanner.run())
         
     except Exception as e:
