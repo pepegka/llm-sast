@@ -89,9 +89,6 @@ class ConfigLoader:
         if config.get("openai"):
             # Check required OpenAI settings
             openai_config = config["openai"]
-            if not openai_config.get("api_key"):
-                raise ConfigurationError("OpenAI API key is not set")
-                
             # Validate model name
             if not openai_config.get("model"):
                 raise ConfigurationError("OpenAI model name is not set")
