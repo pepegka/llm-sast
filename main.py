@@ -37,7 +37,7 @@ def main():
             env_file=Path(args.env_file) if args.env_file else None
         )
         
-        elif service_type == "ollama":
+        if service_type == "ollama":
             # Create scanner configuration for Ollama
             scanner_config = ScannerConfig(
                 target_dir=Path(args.target_dir),
