@@ -37,7 +37,7 @@ def main():
             env_file=Path(args.env_file) if args.env_file else None
         )
         
-        if service_type == "ollama":
+        elif service_type == "ollama":
             # Create scanner configuration for Ollama
             scanner_config = ScannerConfig(
                 target_dir=Path(args.target_dir),
@@ -55,7 +55,7 @@ def main():
                 openai_config=config["ollama"],
                 model_name=model_name
             )
-        elif service_type == "openai":
+        if service_type == "openai":
             # Create scanner configuration for OpenAI
             api_key = config["openai"]["api_key"]
 
