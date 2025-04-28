@@ -25,3 +25,11 @@ scanner:
     - "**/*.min.js"
   # Default logging level
   log_level: "INFO" 
+
+# Ollama Configuration
+ollama:
+  # Maximum concurrent API calls
+  max_concurrent_calls: 5
+  # Timeout for API calls in seconds
+  timeout: 30
+  # Add any other necessary configuration settings for the 'ollama' service here
