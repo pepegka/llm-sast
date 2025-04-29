@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import os
 import logging
 import time
 import sys
@@ -50,7 +49,6 @@ def main():
             output_dir=Path(args.output_dir),
             concurrency=llm_conf.get("max_concurrent_calls", 5),
             api_key=llm_conf.get("api_key", ""),
-            llm_provider=provider,
             llm_provider=provider,
             log_level=args.log_level,
             timeout=llm_conf.get("timeout", 30),
