@@ -22,6 +22,11 @@ def main():
     parser.add_argument("--log-file", help="Path to log file")
     args = parser.parse_args()
     
+    # Create a minimal logger *before* the main try-block so that we can
+    # still log unexpected failures that occur during early start-up
+    # (e.g. configuration errors) without crashing with an undefined name.
+    logger = logging.getLogger("llm_sast")
+    
     try:
         # Setup logging
         log_file = Path(args.log_file) if args.log_file else None
@@ -30,7 +35,9 @@ def main():
         # Validate target directory
         target_dir = Path(args.target_dir)
         if not target_dir.exists() or not target_dir.is_dir():
-            raise ScannerError(f"Target directory does not exist or is not a directory: {target_dir}")
+            raise ScannerError(
+                f"Target directory does not exist or is not a directory: {target_dir}"
+            )
             
         # Load configuration
         logger.info("Loading configuration...")
