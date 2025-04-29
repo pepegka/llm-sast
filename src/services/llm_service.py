@@ -312,7 +312,7 @@ class OpenAIService(LLMService):
             self.logger.error(f"Error enriching vulnerability: {str(e)}")
             return vulnerability 
 # --- Ollama Service Implementation ---
-class OllamaService(LLMService):
+class OllamaService(OpenAIService):
     """Ollama implementation of the LLM service."""
     
     def __init__(self, config: Dict[str, Any]):
@@ -327,7 +327,7 @@ class OllamaService(LLMService):
         self.retry_delay = 2
         self.logger = logging.getLogger("llm_sast.ollama_service")
     
-    async def _chat(self, messages: List[Dict]) -> str:
+    async def _make_api_call_with_retry(self, messages: List[Dict]) -> str:
         for attempt in range(self.max_retries):
             try:
                 now = time.time()
@@ -353,8 +353,4 @@ class OllamaService(LLMService):
                     raise
         return ""
     
-    async def analyze_code(self, code: str, file_path: str) -> List[Vulnerability]:
-        return await OpenAIService._analyze_code(self, code, file_path)  # type: ignore
     
-    async def enrich_finding(self, vulnerability: Vulnerability) -> Vulnerability:
-        return await OpenAIService._enrich_finding(self, vulnerability)  # type: ignore
