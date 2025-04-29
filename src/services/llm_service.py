@@ -6,6 +6,7 @@ import logging
 import time
 from typing import List, Optional, Dict, Any
 import openai
+import ollama
 from ..models.vulnerability import Vulnerability, CodeLocation, Severity
 from ..utils.exceptions import LLMServiceError
 
@@ -310,3 +311,50 @@ class OpenAIService(LLMService):
         except Exception as e:
             self.logger.error(f"Error enriching vulnerability: {str(e)}")
             return vulnerability 
+# --- Ollama Service Implementation ---
+class OllamaService(LLMService):
+    """Ollama implementation of the LLM service."""
+    
+    def __init__(self, config: Dict[str, Any]):
+        ollama_config = config["ollama"]
+        self.base_url = ollama_config.get("base_url", "http://localhost:11434")
+        self.model = ollama_config.get("model", "llama3")
+        self.timeout = ollama_config.get("timeout", 30)
+        self.semaphore = asyncio.Semaphore(ollama_config.get("max_concurrent_calls", 5))
+        self.call_interval = 1
+        self.last_call = 0
+        self.max_retries = 3
+        self.retry_delay = 2
+        self.logger = logging.getLogger("llm_sast.ollama_service")
+    
+    async def _chat(self, messages: List[Dict]) -> str:
+        for attempt in range(self.max_retries):
+            try:
+                now = time.time()
+                if now - self.last_call < self.call_interval:
+                    await asyncio.sleep(self.call_interval - (now - self.last_call))
+                async with self.semaphore:
+                    self.last_call = time.time()
+                    response = await asyncio.to_thread(
+                        ollama.chat,
+                        model=self.model,
+                        messages=messages
+                    )
+                    if not response or "message" not in response:
+                        raise LLMServiceError("No response from Ollama API")
+                    return response["message"]["content"]
+            except Exception as e:
+                if attempt < self.max_retries - 1:
+                    self.logger.warning(f"Ollama call failed ({e}), retrying in {self.retry_delay}s...")
+                    await asyncio.sleep(self.retry_delay)
+                    self.retry_delay *= 2
+                else:
+                    self.logger.error(f"Ollama error after {self.max_retries} attempts: {e}")
+                    raise
+        return ""
+    
+    async def analyze_code(self, code: str, file_path: str) -> List[Vulnerability]:
+        return await OpenAIService._analyze_code(self, code, file_path)  # type: ignore
+    
+    async def enrich_finding(self, vulnerability: Vulnerability) -> Vulnerability:
+        return await OpenAIService._enrich_finding(self, vulnerability)  # type: ignore

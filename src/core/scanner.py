@@ -4,7 +4,7 @@ import time
 from typing import List, Optional, Dict, Any
 from ..models.config import ScannerConfig
 from ..models.vulnerability import Vulnerability
-from ..services.llm_service import LLMService, OpenAIService
+from ..services.llm_service import LLMService, OpenAIService, OllamaService
 from ..services.file_service import FileService
 from ..reporters.base_reporter import BaseReporter
 from ..reporters.json_reporter import JSONReporter
@@ -14,7 +14,7 @@ from ..utils.exceptions import ScannerError, FileAccessError
 class Scanner:
     """Main scanner class that orchestrates the SAST scanning process."""
     
-    def __init__(self, config: ScannerConfig, openai_config: Dict[str, Any]):
+    def __init__(self, config: ScannerConfig, llm_config: Dict[str, Any], provider: str = "openai"):
         """
         Initialize the scanner.
         
@@ -23,7 +23,12 @@ class Scanner:
             openai_config: OpenAI configuration dictionary
         """
         self.config = config
-        self.llm_service = OpenAIService({"openai": openai_config})
+        if provider == "openai":
+            self.llm_service = OpenAIService({"openai": llm_config})
+        elif provider == "ollama":
+            self.llm_service = OllamaService({"ollama": llm_config})
+        else:
+            raise ScannerError(f"Unsupported llm provider '{provider}'")
         self.file_service = FileService(config=config)
         # Initialize both reporters
         self.reporters = [

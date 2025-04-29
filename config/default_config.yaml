@@ -1,3 +1,5 @@
+llm_provider: "openai"
+
 # OpenAI Configuration
 openai:
   # API base URL (leave empty to use default OpenAI API URL)

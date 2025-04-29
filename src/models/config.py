@@ -9,6 +9,7 @@ class ScannerConfig:
     output_dir: Path
     concurrency: int
     api_key: str
+    llm_provider: str = "openai"
     log_level: str = "INFO"
     timeout: int = 3600
     max_file_size: int = 1024 * 1024  # 1MB
@@ -17,6 +18,7 @@ class ScannerConfig:
     def __post_init__(self):
         self.target_dir = Path(self.target_dir).resolve()
         self.output_dir = Path(self.output_dir).resolve()
+        self.llm_provider = self.llm_provider.lower()
         if self.excluded_patterns is None:
             self.excluded_patterns = [
                 "**/.git/**",

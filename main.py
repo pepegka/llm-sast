@@ -40,15 +40,20 @@ def main():
             env_file=Path(args.env_file) if args.env_file else None
         )
         
+        provider = config.get("llm_provider", "openai").lower()
+        llm_conf = config[provider]
+        
         # Create scanner configuration
         logger.info("Initializing scanner...")
         scanner_config = ScannerConfig(
             target_dir=target_dir,
             output_dir=Path(args.output_dir),
-            concurrency=config["openai"].get("max_concurrent_calls", 5),
-            api_key=config["openai"]["api_key"],
+            concurrency=llm_conf.get("max_concurrent_calls", 5),
+            api_key=llm_conf.get("api_key", ""),
+            llm_provider=provider,
+            llm_provider=provider,
             log_level=args.log_level,
-            timeout=config["openai"].get("timeout", 30),
+            timeout=llm_conf.get("timeout", 30),
             max_file_size=config["scanner"].get("max_file_size", 1024 * 1024),
             excluded_patterns=config["scanner"].get("excluded_patterns", None)
         )
@@ -57,7 +62,8 @@ def main():
         logger.info("Starting scan process...")
         scanner = Scanner(
             config=scanner_config,
-            openai_config=config["openai"]
+            llm_config=llm_conf,
+            provider=provider
         )
         
         # Run the scan
