@@ -20,4 +20,9 @@ SPECIAL_FILES: set[str] = {
     ".env",                                                                    
     "requirements.txt",                                                        
     "package.json",                                                            
-}                
+}
+
+PROGRAMMING_EXTENSIONS: set[str] = {
+    ".py", ".js", ".ts", ".go", ".java",
+    ".cpp", ".c", ".rs", ".php", ".rb"
+}
