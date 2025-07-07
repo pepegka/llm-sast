@@ -4,5 +4,9 @@ python-dotenv>=1.0.0
 openai>=1.0.0
 pyyaml>=6.0.0
 typing-extensions>=4.5.0
-rich>=13.0.0  # For better console output
-chardet>=5.2.0  # For file encoding detection
+rich>=13.0.0
+chardet>=5.2.0
+
+#benchmarks only
+semgrep
+bandit

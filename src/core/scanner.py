@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import time
+from pathlib import Path
+import aiofiles
 from typing import List, Optional, Dict, Any
 from ..models.config import ScannerConfig
 from ..models.vulnerability import Vulnerability
@@ -9,6 +11,8 @@ from ..services.file_service import FileService
 from ..reporters.base_reporter import BaseReporter
 from ..reporters.json_reporter import JSONReporter
 from ..reporters.markdown_reporter import MarkdownReporter
+from ..reporters.html_reporter import HTMLReporter
+from ..reporters.sarif_reporter import SARIFReporter
 from ..utils.exceptions import ScannerError, FileAccessError
 
 class Scanner:
@@ -28,7 +32,9 @@ class Scanner:
         # Initialize both reporters
         self.reporters = [
             JSONReporter(config=config),
-            MarkdownReporter(config=config)
+            MarkdownReporter(config=config),
+            HTMLReporter(config=config),
+        SARIFReporter(config=config)
         ]
         self.logger = logging.getLogger("llm_sast.scanner")
         self._processed_files = 0
@@ -69,10 +75,23 @@ class Scanner:
                 
                 # Enrich findings
                 self.logger.debug(f"Enriching findings for: {file_path}")
-                enriched_vulnerabilities = []
-                for vuln in vulnerabilities:
-                    enriched_vuln = await self.llm_service.enrich_finding(vuln)
-                    enriched_vulnerabilities.append(enriched_vuln)
+                try:
+                    enriched_vulnerabilities = await self.llm_service.enrich_findings_for_file(str(file_path), vulnerabilities, content)
+                except AttributeError:
+                    # Fallback for providers without batch method
+                    enriched_vulnerabilities = []
+                    for vuln in vulnerabilities:
+                        enriched_vuln = await self.llm_service.enrich_finding(vuln)
+                        enriched_vulnerabilities.append(enriched_vuln)
+                
+                # Generate combined patch for this file to minimize LLM calls
+                patch_text = await self.llm_service.generate_patches_for_file(str(file_path), enriched_vulnerabilities, content)
+                if patch_text:
+                    patches_dir = self.config.output_dir / "patches"
+                    patches_dir.mkdir(parents=True, exist_ok=True)
+                    patch_file = patches_dir / f"{Path(file_path).name}.patch"
+                    async with aiofiles.open(patch_file, mode="w", encoding="utf-8") as pf:
+                        await pf.write(patch_text + "\n")
                 
                 all_vulnerabilities.extend(enriched_vulnerabilities)
                 
@@ -86,6 +105,9 @@ class Scanner:
             except Exception as e:
                 self.logger.error(f"Error scanning file {file_path}: {str(e)}")
         
+        # (Per-file patches already generated above; no additional LLM calls here)
+
+
         # Generate reports
         self.logger.info("Generating reports...")
         report_start_time = time.time()

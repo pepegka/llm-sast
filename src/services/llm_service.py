@@ -24,6 +24,21 @@ class LLMService(ABC):
         """Enrich a vulnerability finding with additional context."""
         pass
 
+    @abstractmethod
+    async def enrich_findings_for_file(self, file_path: str, vulnerabilities: List[Vulnerability], file_content: str) -> List[Vulnerability]:
+        """Batch-enrich multiple findings of the same file in one call."""
+        pass
+
+    @abstractmethod
+    async def generate_patch(self, vulnerability: Vulnerability) -> str:
+        """Generate a unified diff patch fixing the vulnerability. Returns the diff text or empty string."""
+        pass
+
+    @abstractmethod
+    async def generate_patches_for_file(self, file_path: str, vulnerabilities: List[Vulnerability], file_content: str) -> str:
+        """Generate unified diff patches for multiple vulnerabilities in a single file in one request."""
+        pass
+
 class OpenAIService(LLMService):
     """OpenAI implementation of the LLM service."""
     
@@ -122,6 +137,121 @@ class OpenAIService(LLMService):
         text = re.sub(r'```\s*\n', '```\n', text)  # Replace ```<whitespace>\n with ```\n
         
         return text
+
+    async def generate_patches_for_file(self, file_path: str, vulnerabilities: List[Vulnerability], file_content: str) -> str:
+        """Generate a single diff that addresses all vulnerabilities in a file to save LLM calls."""
+        if not vulnerabilities:
+            return ''
+        summary_list = []
+        for idx, v in enumerate(vulnerabilities, start=1):
+            summary_list.append(
+                f"{idx}. {v.title} ({v.cwe_id}) lines {v.location.start_line}-{v.location.end_line} – {v.description}"
+            )
+        summary = "\n".join(summary_list)
+        messages = [
+            {"role": "system", "content": (
+                "You are a senior secure code engineer. "
+                "Given a file and a list of vulnerabilities, return ONE unified diff patch that fixes ALL of them. "
+                "Use the original filename in the diff header and do not add explanations." )},
+            {"role": "user", "content": (
+                f"Filename: {file_path}\n\n"
+                f"Vulnerabilities:\n{summary}\n\n"
+                "File content (with line numbers):\n" + "\n".join(
+                    f"{i+1:4d} | {line}" for i, line in enumerate(file_content.splitlines())
+                ) + "\n\nProvide the complete unified diff now." )}
+        ]
+        try:
+            diff_text = await self._make_api_call_with_retry(messages)
+            if not diff_text:
+                return ''
+            diff_text = diff_text.strip()
+            if diff_text.startswith('```'):
+                diff_text = '\n'.join([line for line in diff_text.split('\n') if not line.startswith('```')]).strip()
+            return diff_text
+        except Exception as e:
+            self.logger.error(f"Error generating combined patch: {e}")
+            return ''
+
+    async def enrich_findings_for_file(self, file_path: str, vulnerabilities: List[Vulnerability], file_content: str) -> List[Vulnerability]:
+        """Batch enrich vulnerabilities to reduce LLM requests."""
+        if not vulnerabilities:
+            return vulnerabilities
+        # Build numbered summary for the prompt
+        numbered = []
+        for idx, v in enumerate(vulnerabilities, 1):
+            numbered.append(
+                f"{idx}. {v.title} ({v.cwe_id}) lines {v.location.start_line}-{v.location.end_line}: {v.description}"
+            )
+        summary = "\n".join(numbered)
+        messages = [
+            {"role": "system", "content": (
+                "You are an expert penetration tester and security engineer. "
+                "For each listed vulnerability, return a JSON array element with keys 'poc', 'fix', 'recommendation'. "
+                "Return ONLY valid JSON with the same element order." )},
+            {"role": "user", "content": (
+                f"Filename: {file_path}\n\nFindings:\n{summary}\n\n"
+                "File content (with line numbers):\n" + "\n".join(
+                    f"{i+1:4d} | {line}" for i, line in enumerate(file_content.splitlines())
+                ) + "\n\nRespond with the JSON array now." )}
+        ]
+        try:
+            response = await self._make_api_call_with_retry(messages)
+            if not response:
+                return vulnerabilities
+            # Load JSON safely
+            try:
+                data = json.loads(response)
+            except json.JSONDecodeError:
+                # Attempt to strip fences and retry
+                cleaned = response.strip()
+                if cleaned.startswith('```'):
+                    cleaned = '\n'.join(l for l in cleaned.split('\n') if not l.startswith('```'))
+                try:
+                    data = json.loads(cleaned)
+                except Exception:
+                    self.logger.error("Failed to parse JSON enrichment response")
+                    return vulnerabilities
+            if not isinstance(data, list) or len(data) != len(vulnerabilities):
+                self.logger.error("JSON enrichment length mismatch")
+                return vulnerabilities
+            for v, enrich in zip(vulnerabilities, data):
+                v.proof_of_concept = self._fix_code_blocks(enrich.get('poc', ''))
+                v.fix = self._fix_code_blocks(enrich.get('fix', ''))
+                v.recommendation = self._fix_code_blocks(enrich.get('recommendation', ''))
+            return vulnerabilities
+        except Exception as e:
+            self.logger.error(f"Error batch enriching findings: {e}")
+            return vulnerabilities
+
+    async def generate_patch(self, vulnerability: Vulnerability) -> str:
+        """Generate a minimal unified diff patch for the given vulnerability using the LLM."""
+        self.logger.debug(f"Generating patch for {vulnerability.title} in {vulnerability.location.file_path}")
+        snippet = vulnerability.location.snippet or ''
+        messages = [
+            {"role": "system", "content": (
+                "You are a senior secure code engineer. "
+                "Return ONLY a unified diff patch that fixes the vulnerability. "
+                "Use the original filename in the diff header (---/+++). Do not include any commentary." )},
+            {"role": "user", "content": (
+                f"File: {vulnerability.location.file_path}\n"
+                f"Lines: {vulnerability.location.start_line}-{vulnerability.location.end_line}\n"
+                f"Vulnerability: {vulnerability.title} ({vulnerability.cwe_id})\n"
+                f"Description: {vulnerability.description}\n"
+                f"Snippet:\n{snippet}\n\n"
+                "Provide the patch now." )}
+        ]
+        try:
+            diff_text = await self._make_api_call_with_retry(messages)
+            if not diff_text:
+                return ''
+            diff_text = diff_text.strip()
+            if diff_text.startswith('```'):
+                # Remove any markdown fences
+                diff_text = '\n'.join([line for line in diff_text.split('\n') if not line.startswith('```')]).strip()
+            return diff_text
+        except Exception as e:
+            self.logger.error(f"Error generating patch: {e}")
+            return ''
         
     async def analyze_code(self, code: str, file_path: str) -> List[Vulnerability]:
         """Analyze code using OpenAI's API for vulnerabilities."""
