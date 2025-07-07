@@ -12,6 +12,7 @@ from ..reporters.base_reporter import BaseReporter
 from ..reporters.json_reporter import JSONReporter
 from ..reporters.markdown_reporter import MarkdownReporter
 from ..reporters.html_reporter import HTMLReporter
+from ..reporters.sarif_reporter import SARIFReporter
 from ..utils.exceptions import ScannerError, FileAccessError
 
 class Scanner:
@@ -32,7 +33,8 @@ class Scanner:
         self.reporters = [
             JSONReporter(config=config),
             MarkdownReporter(config=config),
-            HTMLReporter(config=config)
+            HTMLReporter(config=config),
+        SARIFReporter(config=config)
         ]
         self.logger = logging.getLogger("llm_sast.scanner")
         self._processed_files = 0
