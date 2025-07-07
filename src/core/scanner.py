@@ -9,6 +9,7 @@ from ..services.file_service import FileService
 from ..reporters.base_reporter import BaseReporter
 from ..reporters.json_reporter import JSONReporter
 from ..reporters.markdown_reporter import MarkdownReporter
+from ..reporters.html_reporter import HTMLReporter
 from ..utils.exceptions import ScannerError, FileAccessError
 
 class Scanner:
@@ -28,7 +29,8 @@ class Scanner:
         # Initialize both reporters
         self.reporters = [
             JSONReporter(config=config),
-            MarkdownReporter(config=config)
+            MarkdownReporter(config=config),
+            HTMLReporter(config=config)
         ]
         self.logger = logging.getLogger("llm_sast.scanner")
         self._processed_files = 0
