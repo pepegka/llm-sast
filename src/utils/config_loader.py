@@ -62,6 +62,12 @@ class ConfigLoader:
             if model:
                 config["openai"]["model"] = model
                 
+            # Ensure llm_provider is set
+            if "llm_provider" not in config:
+                config["llm_provider"] = "openai"
+            else:
+                config["llm_provider"] = str(config["llm_provider"]).lower()
+            
             # Validate configuration
             cls._validate_config(config)
             
@@ -104,24 +110,33 @@ class ConfigLoader:
         Raises:
             ConfigurationError: If configuration is invalid
         """
-        # Check required OpenAI settings
-        if not config.get("openai"):
-            raise ConfigurationError("OpenAI configuration section is missing")
-            
-        openai_config = config["openai"]
-        if not openai_config.get("api_key"):
-            raise ConfigurationError("OpenAI API key is not set")
-            
-        # Validate model name
-        if not openai_config.get("model"):
-            raise ConfigurationError("OpenAI model name is not set")
-            
-        # Validate numeric values
-        if not isinstance(openai_config.get("timeout", 30), (int, float)):
-            raise ConfigurationError("OpenAI timeout must be a number")
-            
-        if not isinstance(openai_config.get("max_concurrent_calls", 5), int):
-            raise ConfigurationError("OpenAI max_concurrent_calls must be an integer")
+        provider = config.get("llm_provider", "openai").lower()
+        
+        if provider == "openai":
+            if not config.get("openai"):
+                raise ConfigurationError("OpenAI configuration section is missing")
+            openai_config = config["openai"]
+            if not openai_config.get("api_key"):
+                raise ConfigurationError("OpenAI API key is not set")
+            if not openai_config.get("model"):
+                raise ConfigurationError("OpenAI model name is not set")
+            if not isinstance(openai_config.get("timeout", 30), (int, float)):
+                raise ConfigurationError("OpenAI timeout must be a number")
+            if not isinstance(openai_config.get("max_concurrent_calls", 5), int):
+                raise ConfigurationError("OpenAI max_concurrent_calls must be an integer")
+                
+        elif provider == "ollama":
+            if not config.get("ollama"):
+                raise ConfigurationError("Ollama configuration section is missing")
+            ollama_config = config["ollama"]
+            if not ollama_config.get("model"):
+                raise ConfigurationError("Ollama model name is not set")
+            if not isinstance(ollama_config.get("timeout", 30), (int, float)):
+                raise ConfigurationError("Ollama timeout must be a number")
+            if not isinstance(ollama_config.get("max_concurrent_calls", 5), int):
+                raise ConfigurationError("Ollama max_concurrent_calls must be an integer")
+        else:
+            raise ConfigurationError(f"Unknown llm_provider '{provider}'. Supported values are 'openai' and 'ollama'")
             
         # Validate scanner settings
         if not config.get("scanner"):

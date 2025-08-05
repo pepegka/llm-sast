@@ -1,3 +1,5 @@
+llm_provider: "openai"
+
 # OpenAI Configuration
 openai:
   # API base URL (leave empty to use default OpenAI API URL)
@@ -25,3 +27,14 @@ scanner:
     - "**/*.min.js"
   # Default logging level
   log_level: "INFO" 
+
+# Ollama Configuration
+ollama:
+  # Base URL of the local Ollama server
+  base_url: "http://localhost:11434"
+  # Model to use for analysis
+  model: "llama3"
+  # Timeout for API calls in seconds
+  timeout: 30
+  # Maximum concurrent API calls
+  max_concurrent_calls: 1
