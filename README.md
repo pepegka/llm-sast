@@ -30,7 +30,7 @@ llm-sast/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/llm-sast.git
+git clone https://github.com/pepegka/llm-sast.git
 cd llm-sast
 ```
 
