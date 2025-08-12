@@ -266,6 +266,9 @@ class OpenAIService(LLMService):
         messages = [
             {"role": "system", "content": (
                 "You are a security analyst specialized in static code analysis. "
+                "IMPORTANT: Perform a quick initial scan first. If no obvious security vulnerabilities are found in the first pass, respond immediately with exactly: 'NO_VULNERABILITIES_FOUND'\n\n"
+                "Only perform detailed analysis if you identify potential security issues. "
+                "Focus on common vulnerability patterns: SQL injection, XSS, command injection, path traversal, authentication bypass, etc.\n\n"
                 "For each vulnerability found, provide the information in the following format:\n"
                 "---VULNERABILITY START---\n"
                 "TITLE: <clear title>\n"
@@ -281,8 +284,8 @@ class OpenAIService(LLMService):
                 "- For file-level issues use 'Lines 1-N in file scope'\n"
                 "- DO NOT include actual code snippets\n"
                 "- DO NOT use ranges without context\n"
-                "- IMPORTANT: The code is shown with line numbers. Use these exact numbers in your response.\n"
-                "- IMPORTANT: The file has {total_lines} total lines. Ensure your line numbers are within this range.\n"
+                f"- IMPORTANT: The code is shown with line numbers. Use these exact numbers in your response.\n"
+                f"- IMPORTANT: The file has {total_lines} total lines. Ensure your line numbers are within this range.\n"
                 "- IMPORTANT: Line numbers are shown as '1234 | code'. Use the number before the | symbol.\n"
                 "Examples:\n"
                 "LOCATION: Lines 45-47 in parse_json_response()\n"
@@ -290,14 +293,14 @@ class OpenAIService(LLMService):
                 "LOCATION: Lines 1-156 in file scope"
             )},
             {"role": "user", "content": (
-                f"Analyze the following code from {file_path} for security vulnerabilities. "
-                "For each vulnerability, provide:\n"
+                f"Quickly analyze the following code from {file_path} for security vulnerabilities. "
+                "IMPORTANT: If after a quick scan you don't see obvious security issues, respond immediately with 'NO_VULNERABILITIES_FOUND' - don't overthink it.\n"
+                "Only provide detailed analysis if you identify actual security vulnerabilities:\n"
                 "1. A clear title describing the issue\n"
                 "2. A detailed description of the security risk\n"
                 "3. Severity level (CRITICAL for RCE/SQLi, HIGH for auth bypass/data exposure, MEDIUM for DoS/info leak, LOW for best practices)\n"
                 "4. The most relevant CWE ID (e.g., CWE-79 for XSS)\n"
                 "5. Location information in format 'Lines X-Y in function_name()' or 'Lines X-Y in file scope'\n"
-                "IMPORTANT: The code is shown with line numbers. Use these exact numbers in your response.\n"
                 f"```\n{numbered_code}\n```"
             )}
         ]
@@ -305,6 +308,10 @@ class OpenAIService(LLMService):
         try:
             raw_response = await self._make_api_call_with_retry(messages)
             if not raw_response:
+                return []
+                
+            # Check for the quick no-vulnerabilities response
+            if raw_response.strip() == 'NO_VULNERABILITIES_FOUND':
                 return []
                 
             # Parse vulnerabilities from the text response
