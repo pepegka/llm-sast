@@ -188,7 +188,10 @@ class OpenAIService(LLMService):
             {"role": "system", "content": (
                 "You are an expert penetration tester and security engineer. "
                 "For each listed vulnerability, return a JSON array element with keys 'poc', 'fix', 'recommendation'. "
-                "Return ONLY valid JSON with the same element order." )},
+                "Return ONLY valid JSON with the same element order. "
+                "If you cannot provide JSON, use the fallback format:\n"
+                "---VULN 1---\nPOC: <proof of concept>\nFIX: <fix instructions>\nREC: <recommendations>\n"
+                "---VULN 2---\n... and so on." )},
             {"role": "user", "content": (
                 f"Filename: {file_path}\n\nFindings:\n{summary}\n\n"
                 "File content (with line numbers):\n" + "\n".join(
@@ -199,30 +202,91 @@ class OpenAIService(LLMService):
             response = await self._make_api_call_with_retry(messages)
             if not response:
                 return vulnerabilities
-            # Load JSON safely
+                
+            # Try JSON parsing first
             try:
-                data = json.loads(response)
-            except json.JSONDecodeError:
-                # Attempt to strip fences and retry
-                cleaned = response.strip()
-                if cleaned.startswith('```'):
-                    cleaned = '\n'.join(l for l in cleaned.split('\n') if not l.startswith('```'))
-                try:
-                    data = json.loads(cleaned)
-                except Exception:
-                    self.logger.error("Failed to parse JSON enrichment response")
+                data = json.loads(response.strip())
+                if isinstance(data, list) and len(data) == len(vulnerabilities):
+                    for v, enrich in zip(vulnerabilities, data):
+                        if isinstance(enrich, dict):
+                            v.proof_of_concept = self._safe_fix_code_blocks(enrich.get('poc', ''))
+                            v.fix = self._safe_fix_code_blocks(enrich.get('fix', ''))
+                            v.recommendation = self._safe_fix_code_blocks(enrich.get('recommendation', ''))
                     return vulnerabilities
-            if not isinstance(data, list) or len(data) != len(vulnerabilities):
-                self.logger.error("JSON enrichment length mismatch")
-                return vulnerabilities
-            for v, enrich in zip(vulnerabilities, data):
-                v.proof_of_concept = self._fix_code_blocks(enrich.get('poc', ''))
-                v.fix = self._fix_code_blocks(enrich.get('fix', ''))
-                v.recommendation = self._fix_code_blocks(enrich.get('recommendation', ''))
+            except json.JSONDecodeError:
+                pass
+                
+            # Try to clean and parse JSON again
+            try:
+                cleaned = response.strip()
+                if cleaned.startswith('```') and cleaned.endswith('```'):
+                    cleaned = '\n'.join(l for l in cleaned.split('\n')[1:-1])
+                elif cleaned.startswith('```'):
+                    cleaned = '\n'.join(l for l in cleaned.split('\n')[1:])
+                    
+                data = json.loads(cleaned)
+                if isinstance(data, list) and len(data) == len(vulnerabilities):
+                    for v, enrich in zip(vulnerabilities, data):
+                        if isinstance(enrich, dict):
+                            v.proof_of_concept = self._safe_fix_code_blocks(enrich.get('poc', ''))
+                            v.fix = self._safe_fix_code_blocks(enrich.get('fix', ''))
+                            v.recommendation = self._safe_fix_code_blocks(enrich.get('recommendation', ''))
+                    return vulnerabilities
+            except Exception:
+                pass
+                
+            # Fallback to text parsing if JSON fails
+            self.logger.warning("JSON parsing failed, attempting text parsing fallback")
+            vuln_sections = response.split('---VULN ')
+            if len(vuln_sections) > 1:
+                for i, section in enumerate(vuln_sections[1:], 0):
+                    if i < len(vulnerabilities):
+                        poc_match = re.search(r'POC:\s*(.+?)(?=\nFIX:|$)', section, re.DOTALL)
+                        fix_match = re.search(r'FIX:\s*(.+?)(?=\nREC:|$)', section, re.DOTALL)
+                        rec_match = re.search(r'REC:\s*(.+?)(?=\n---|$)', section, re.DOTALL)
+                        
+                        if poc_match:
+                            vulnerabilities[i].proof_of_concept = self._safe_fix_code_blocks(poc_match.group(1).strip())
+                        if fix_match:
+                            vulnerabilities[i].fix = self._safe_fix_code_blocks(fix_match.group(1).strip())
+                        if rec_match:
+                            vulnerabilities[i].recommendation = self._safe_fix_code_blocks(rec_match.group(1).strip())
+                            
             return vulnerabilities
+            
         except Exception as e:
             self.logger.error(f"Error batch enriching findings: {e}")
-            return vulnerabilities
+            # Fallback to individual enrichment if batch fails
+            self.logger.info("Falling back to individual enrichment")
+            try:
+                enriched_vulnerabilities = []
+                for vuln in vulnerabilities:
+                    enriched_vuln = await self.enrich_finding(vuln)
+                    enriched_vulnerabilities.append(enriched_vuln)
+                return enriched_vulnerabilities
+            except Exception as fallback_error:
+                self.logger.error(f"Individual enrichment fallback also failed: {fallback_error}")
+                return vulnerabilities
+                
+    def _safe_fix_code_blocks(self, text) -> str:
+        """Safely fix code blocks with robust type handling."""
+        try:
+            # Handle non-string inputs gracefully
+            if not isinstance(text, str):
+                if isinstance(text, (list, tuple)):
+                    text = ' '.join(str(item) for item in text)
+                elif text is None:
+                    return ""
+                else:
+                    text = str(text)
+            
+            if not text:
+                return ""
+                
+            return self._fix_code_blocks(text)
+        except Exception as e:
+            self.logger.warning(f"Error fixing code blocks: {e}, returning raw text")
+            return str(text) if text is not None else ""
 
     async def generate_patch(self, vulnerability: Vulnerability) -> str:
         """Generate a minimal unified diff patch for the given vulnerability using the LLM."""
@@ -439,9 +503,9 @@ class OpenAIService(LLMService):
             rec_match = re.search(r"---RECOMMENDATIONS START---\n(.*?)\n---RECOMMENDATIONS END---", response, re.DOTALL)
             
             # Store the enrichment data, fixing code blocks in each section
-            vulnerability.proof_of_concept = self._fix_code_blocks(poc_match.group(1).strip()) if poc_match else ''
-            vulnerability.fix = self._fix_code_blocks(fix_match.group(1).strip()) if fix_match else ''
-            vulnerability.recommendation = self._fix_code_blocks(rec_match.group(1).strip()) if rec_match else ''
+            vulnerability.proof_of_concept = self._safe_fix_code_blocks(poc_match.group(1).strip()) if poc_match else ''
+            vulnerability.fix = self._safe_fix_code_blocks(fix_match.group(1).strip()) if fix_match else ''
+            vulnerability.recommendation = self._safe_fix_code_blocks(rec_match.group(1).strip()) if rec_match else ''
             
             return vulnerability
             
