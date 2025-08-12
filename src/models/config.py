@@ -14,6 +14,7 @@ class ScannerConfig:
     timeout: int = 3600
     max_file_size: int = 1024 * 1024  # 1MB
     excluded_patterns: list[str] = None
+    generate_patches: bool = True
     
     def __post_init__(self):
         self.target_dir = Path(self.target_dir).resolve()

@@ -39,7 +39,7 @@ class Scanner:
             JSONReporter(config=config),
             MarkdownReporter(config=config),
             HTMLReporter(config=config),
-        SARIFReporter(config=config)
+            SARIFReporter(config=config)
         ]
         self.logger = logging.getLogger("llm_sast.scanner")
         self._processed_files = 0
@@ -78,7 +78,15 @@ class Scanner:
                 self.logger.debug(f"Analyzing code in: {file_path}")
                 vulnerabilities = await self.llm_service.analyze_code(content, str(file_path))
                 
-                # Enrich findings
+                # Skip enrichment and patch generation if no vulnerabilities found
+                if not vulnerabilities:
+                    self.logger.info(f"No vulnerabilities found in {file_path}")
+                    file_time = time.time() - file_start_time
+                    self._file_times[str(file_path)] = file_time
+                    self.logger.info(f"Completed scanning {file_path} in {file_time:.2f} seconds. Found 0 vulnerabilities.")
+                    continue
+                
+                # Enrich findings only if vulnerabilities exist
                 self.logger.debug(f"Enriching findings for: {file_path}")
                 try:
                     enriched_vulnerabilities = await self.llm_service.enrich_findings_for_file(str(file_path), vulnerabilities, content)
@@ -89,14 +97,17 @@ class Scanner:
                         enriched_vuln = await self.llm_service.enrich_finding(vuln)
                         enriched_vulnerabilities.append(enriched_vuln)
                 
-                # Generate combined patch for this file to minimize LLM calls
-                patch_text = await self.llm_service.generate_patches_for_file(str(file_path), enriched_vulnerabilities, content)
-                if patch_text:
-                    patches_dir = self.config.output_dir / "patches"
-                    patches_dir.mkdir(parents=True, exist_ok=True)
-                    patch_file = patches_dir / f"{Path(file_path).name}.patch"
-                    async with aiofiles.open(patch_file, mode="w", encoding="utf-8") as pf:
-                        await pf.write(patch_text + "\n")
+                # Generate patches only if enabled and vulnerabilities exist
+                if self.config.generate_patches:
+                    patch_text = await self.llm_service.generate_patches_for_file(str(file_path), enriched_vulnerabilities, content)
+                    if patch_text:
+                        patches_dir = self.config.output_dir / "patches"
+                        patches_dir.mkdir(parents=True, exist_ok=True)
+                        patch_file = patches_dir / f"{Path(file_path).name}.patch"
+                        async with aiofiles.open(patch_file, mode="w", encoding="utf-8") as pf:
+                            await pf.write(patch_text + "\n")
+                else:
+                    self.logger.debug(f"Patch generation disabled, skipping for: {file_path}")
                 
                 all_vulnerabilities.extend(enriched_vulnerabilities)
                 
@@ -110,9 +121,6 @@ class Scanner:
             except Exception as e:
                 self.logger.error(f"Error scanning file {file_path}: {str(e)}")
         
-        # (Per-file patches already generated above; no additional LLM calls here)
-
-
         # Generate reports
         self.logger.info("Generating reports...")
         report_start_time = time.time()
