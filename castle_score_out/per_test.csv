@@ -1,0 +1,251 @@
+test,gt_vulnerable,gt_cwe,gt_description,pred_any_alert,pred_cwe_match,pred_cwes
+CASTLE-125-1,True,125,Upper array boundary error violation.,True,False,119
+CASTLE-125-10,False,125,Number of countries is returned correctly,False,False,
+CASTLE-125-2,True,125,Upper array boundary error violation.,True,True,125
+CASTLE-125-3,True,125,Upper array boundary error violation.,True,True,125
+CASTLE-125-4,True,125,Reading from negative index of an array,True,True,125
+CASTLE-125-5,True,125,Reading outside of array bounds due to wrong array length calculation,True,True,125
+CASTLE-125-6,True,125,Reading outside of array bounds due to not implemented length calculation,True,True,125
+CASTLE-125-7,False,125,No read out of bounds in any iterations.,False,False,
+CASTLE-125-8,False,125,Reading is within the multiline string bounds,True,True,125
+CASTLE-125-9,False,125,The array is not indexed out of bounds,False,False,
+CASTLE-134-1,True,134,The format string is sourced fron an input without sanitization,True,True,134
+CASTLE-134-10,False,134,The format string is sourced fron an input with sufficient sanitization,True,True,134
+CASTLE-134-2,True,134,The format string is sourced fron an input without sanitization,True,True,134
+CASTLE-134-3,True,134,The format string is sourced fron an input without sanitization,True,True,134
+CASTLE-134-4,True,134,The format string is sourced fron an input without sanitization,True,True,119|134
+CASTLE-134-5,True,134,The format string is sourced fron an input without sanitization,True,True,134
+CASTLE-134-6,True,134,The dynamic parameter selector of the formal string is sourced from an input without sanitization,False,False,
+CASTLE-134-7,False,134,The format string not sourced from outside the program,False,False,
+CASTLE-134-8,False,134,The format string is sourced fron an input without sanitization,False,False,
+CASTLE-134-9,False,134,The format string is not sourced fron an input without sanitization,False,False,
+CASTLE-190-1,True,190,Arithmetic overflow in multiplication.,False,False,
+CASTLE-190-10,False,190,No integer overflow in power_mod function.,False,False,
+CASTLE-190-2,True,190,Integer overflow in atoi function.,False,False,
+CASTLE-190-3,True,190,Integer overflow on addition.,False,False,
+CASTLE-190-4,True,190,Integer overflow on addition (INT_MAX=2147483647).,False,False,
+CASTLE-190-5,True,190,Integer overflow after set operations.,False,False,
+CASTLE-190-6,True,190,Floating point underflow caused by big division (1.0e-38 close to the minimal possible float).,False,False,
+CASTLE-190-7,False,190,There are no arithmetic overflows in any of these functions.,False,False,
+CASTLE-190-8,False,190,There is no arithmetic overflow in any of the the functions.,False,False,
+CASTLE-190-9,False,190,There are not arithmetic overflows in any of the functions.,False,False,
+CASTLE-22-1,True,22,Improper limitation of a pathname leads to path traversal vulnerability.,True,True,22
+CASTLE-22-10,False,22,"Path traversal is not possible, because argv[1] is emptied before it is used.",False,False,
+CASTLE-22-2,True,22,Unimplemented validation of a pathname leads to path traversal vulnerability.,True,True,22
+CASTLE-22-3,True,22,Incorrectly implemented validation of a pathname leads to path traversal vulnerability.,True,True,22
+CASTLE-22-4,True,22,Improper limitation of a pathname leads to path traversal vulnerability (../../../etc/passwd root).,False,False,
+CASTLE-22-5,True,22,The test case exposes a path manipulation.,False,False,
+CASTLE-22-6,True,22,The test case shows a path manipulation weakness.,True,False,122
+CASTLE-22-7,False,22,Proper path validation prevents path traversal.,True,True,119|23
+CASTLE-22-8,False,22,Without the ability to use / characters the path traversal is prevented.,True,True,78
+CASTLE-22-9,False,22,Proper limitation of a pathname prevents path traversal vulnerability.,True,True,78
+CASTLE-253-1,True,253,Incorrect check of function return value.,False,False,
+CASTLE-253-10,False,253,Fgets is null checked correctly.,False,False,
+CASTLE-253-2,True,253,Incorrect check of function return value behind a layer of abstraction,True,False,476
+CASTLE-253-3,True,253,Incorrect check of fgets return value. Should check for NULL.,False,False,
+CASTLE-253-4,True,253,Incorrect check of snprintf return value. Should check for -1.,False,False,
+CASTLE-253-5,True,253,Incorrect check of file open success. Should check for NULL.,False,False,
+CASTLE-253-6,True,253,Incorrect check of file open success. Should check for NULL.,False,False,
+CASTLE-253-7,False,253,Correct check of function return value.,False,False,
+CASTLE-253-8,False,253,File open null condition checked correctly.,False,False,
+CASTLE-253-9,False,253,Malloc is null checked correctly.,False,False,
+CASTLE-327-1,True,327,Password is hashed with MD5.,False,False,
+CASTLE-327-10,False,327,HMAC used with SHA256.,False,False,
+CASTLE-327-2,True,327,Password is hashed with MD5 missdirected by function names.,False,False,
+CASTLE-327-3,True,327,Sensitive data is encrypted with DES.,False,False,
+CASTLE-327-4,True,327,RSA is used without padding.,False,False,
+CASTLE-327-5,True,327,RSA is used with non-OAEP padding (CWE-780).,False,False,
+CASTLE-327-6,True,327,HMAC used with MD5.,False,False,
+CASTLE-327-7,False,327,Password is hashed with SHA256.,False,False,
+CASTLE-327-8,False,327,Sensitive data is encrypted with AES-256.,False,False,
+CASTLE-327-9,False,327,RSA is used with OAEP padding.,False,False,
+CASTLE-362-1,True,362,Race condition is not properly handled in cases where mutex lock cannot be acquired.,False,False,
+CASTLE-362-10,False,362,Race condition avoided by writing to different files,True,True,119
+CASTLE-362-2,True,362,Race condition not handled properly on writing to file.,False,False,
+CASTLE-362-3,True,362,Race condition in shared memory causes undefined behaviour.,False,False,
+CASTLE-362-4,True,362,Clear case of a race condition with shared memory,False,False,
+CASTLE-362-5,True,362,Race condition as multiple threads write to the same file,False,False,
+CASTLE-362-6,True,362,Race condition as multiple threads write to the same file,False,False,
+CASTLE-362-7,False,362,Cases where mutex lock cannot be acquired is properly handled.,False,False,
+CASTLE-362-8,False,362,Race condition avoided by using proper mutex locking.,False,False,
+CASTLE-362-9,False,362,Race condition avoided by using different memory for each thread,False,False,
+CASTLE-369-1,True,369,Mathematical error: division by zero.,False,False,
+CASTLE-369-10,False,369,No division by zero,False,False,
+CASTLE-369-2,True,369,Mathematical error: division by zero.,False,False,
+CASTLE-369-3,True,369,Mathematical error: division by zero.,False,False,
+CASTLE-369-4,True,369,Mathematical error: division by zero.,False,False,
+CASTLE-369-5,True,369,Mathematical error: division by zero.,False,False,
+CASTLE-369-6,True,369,Mathematical error: division by zero.,False,False,
+CASTLE-369-7,False,369,No division by zero,False,False,
+CASTLE-369-8,False,369,No division by zero in the printf function,False,False,
+CASTLE-369-9,False,369,"No division by zero, becuase the divisor is not zero",False,False,
+CASTLE-401-1,True,401,Memory is not released after effective lifetime.,False,False,
+CASTLE-401-10,False,401,"Memory is released after effective lifetime, condition for free is always true",False,False,
+CASTLE-401-2,True,401,Memory is not released after effective lifetime.,False,False,
+CASTLE-401-3,True,401,Memory is not freed after function terminates.,True,False,119
+CASTLE-401-4,True,401,Memory is not freed after obfuscated program terminates.,False,False,
+CASTLE-401-5,True,401,"Memory is not released after effective lifetime, tricked by swap function",False,False,
+CASTLE-401-6,True,401,"Memory is not released after effective lifetime, tricked by swap function called f",False,False,
+CASTLE-401-7,False,401,Memory is freed after use in all cases.,False,False,
+CASTLE-401-8,False,401,Both allocated memory chunks are freed properly,False,False,
+CASTLE-401-9,False,401,Both allocated memory chunks are freed properly,False,False,
+CASTLE-415-1,True,415,Freeing memory again after it has been freed,True,False,416
+CASTLE-415-10,False,415,Memory is only freed once,False,False,
+CASTLE-415-2,True,415,"Freeing memory again after it has been freed, tricked by swap function",False,False,
+CASTLE-415-3,True,415,"Freeing memory again after it has been freed, tricked by swap function called f",False,False,
+CASTLE-415-4,True,415,Freeing memory again after it has been freed,True,False,416
+CASTLE-415-5,True,415,Freeing memory again after it has been freed,True,False,416
+CASTLE-415-6,True,415,Freeing memory again after it has been freed in a function,True,True,415
+CASTLE-415-7,False,415,Both allocated memory chunks are freed properly,False,False,
+CASTLE-415-8,False,415,Both allocated memory chunks are freed properly,False,False,
+CASTLE-415-9,False,415,memory is not freed twice because it is not freed in the cleanup function,False,False,
+CASTLE-416-1,True,416,Memory is used after being freed,True,True,416
+CASTLE-416-10,False,416,Memory is properly freed despite being swapped around,False,False,
+CASTLE-416-2,True,416,Memory is used after being freed,False,False,
+CASTLE-416-3,True,416,"Memory is used after being freed, tricked by swap function",False,False,
+CASTLE-416-4,True,416,"Memory is used after being freed, tricked by swap function called f",False,False,
+CASTLE-416-5,True,416,Memory is used after being freed,True,False,415
+CASTLE-416-6,True,416,Writing to memory that has been freed,True,True,416
+CASTLE-416-7,False,416,"Both allocated memory chunks are freed, and not used after free",False,False,
+CASTLE-416-8,False,416,"Both allocated memory chunks are freed, and not used after free",False,False,
+CASTLE-416-9,False,416,Memory is properly allocated and freed.,False,False,
+CASTLE-476-1,True,476,Potential null pointer dereference because malloc function can retrun NULL.,False,False,
+CASTLE-476-10,False,476,Dereferencing an always null value,False,False,
+CASTLE-476-2,True,476,Potential null pointer dereference because malloc function can retrun NULL.,False,False,
+CASTLE-476-3,True,476,"Dereferencing the result of a function, which can return nullptr",False,False,
+CASTLE-476-4,True,476,Dereferencing after the last member of linked list,False,False,
+CASTLE-476-5,True,476,Dereferencing an always null value,False,False,
+CASTLE-476-6,True,476,"Dereferencing the result of a complex function, which always return nullptr",False,False,
+CASTLE-476-7,False,476,"No null dereference, becuase malloc return value is correctly checked.",False,False,
+CASTLE-476-8,False,476,The derefered value is not null,False,False,
+CASTLE-476-9,False,476,Cannot dereference null result because the values are never equal,False,False,
+CASTLE-522-1,True,522,Password is stored as plain text in the database.,False,False,
+CASTLE-522-10,False,522,No sensitive information is stored in the database.,False,False,
+CASTLE-522-2,True,522,Cleartext storage of password in database.,False,False,
+CASTLE-522-3,True,522,Password in Configuration File,False,False,
+CASTLE-522-4,True,522,"Password in Configuration File (echo -e ""UN=apple\nPD=secret123"" > config.txt)",False,False,
+CASTLE-522-5,True,522,Plain text password is stored in a file,False,False,
+CASTLE-522-6,True,522,Plain text password is stored in /etc/passwd following convention in legacy UNIX systems.,True,False,256|532|732
+CASTLE-522-7,False,522,Password is hashed before being stored in the database.,False,False,
+CASTLE-522-8,False,522,Password read from environment variable,False,False,
+CASTLE-522-9,False,522,MQSql Database connection parameters are loaded from environment.,False,False,
+CASTLE-617-1,True,617,Assertion always reached,False,False,
+CASTLE-617-10,False,617,Assertion never reached,False,False,
+CASTLE-617-2,True,617,Assertion always reached,False,False,
+CASTLE-617-3,True,617,Assertion always reached,False,False,
+CASTLE-617-4,True,617,Assertion always reached,False,False,
+CASTLE-617-5,True,617,Assertion always reached,False,False,
+CASTLE-617-6,True,617,Easly reachable assertion by user input,False,False,
+CASTLE-617-7,False,617,"Easly reachable assertion, but debug is turned off",False,False,
+CASTLE-617-8,False,617,Assertions never reached,False,False,
+CASTLE-617-9,False,617,Assertions never reached,False,False,
+CASTLE-628-1,True,628,write_to_file function call has semantically incorrect parameters.,False,False,
+CASTLE-628-10,False,628,sha256 function call has semantically correct parameters.,False,False,
+CASTLE-628-2,True,628,gte function call has semantically incorrect parameters.,False,False,
+CASTLE-628-3,True,628,power_mod function call has semantically incorrect parameters.,False,False,
+CASTLE-628-4,True,628,sha256 function call has semantically incorrect parameters.,False,False,
+CASTLE-628-5,True,628,url_decode function call has semantically incorrect parameters.,False,False,
+CASTLE-628-6,True,628,httpGet function call has semantically incorrect parameters.,False,False,
+CASTLE-628-7,False,628,reserve2DimArrayAndFillWithRange function call has semantically correct parameters.,False,False,
+CASTLE-628-8,False,628,url_decode function call has semantically correct parameters.,False,False,
+CASTLE-628-9,False,628,url_decode function call has semantically correct parameters.,True,True,119
+CASTLE-674-1,True,674,Uncontrolled recursion due to faulty iteration.,True,True,674
+CASTLE-674-10,False,674,Correct fibonacci implementation does not lead to uncontrolled recursion.,False,False,
+CASTLE-674-2,True,674,Uncontrolled recursion due to faulty iteration.,False,False,
+CASTLE-674-3,True,674,Uncontrolled recursion because of invalid fibonacci implementation.,False,False,
+CASTLE-674-4,True,674,Uncontrolled recursion because of invalid recursive iteration,True,True,674
+CASTLE-674-5,True,674,Uncontrolled recursion because of invalid recursive iteration,True,True,674
+CASTLE-674-6,True,674,Uncontrolled recursion because of invalid iteration reset.,False,False,
+CASTLE-674-7,False,674,No uncontrolled recursion because of valid recursive iteration,False,False,
+CASTLE-674-8,False,674,No uncontrolled recursion because of proper return at the end of the array.,False,False,
+CASTLE-674-9,False,674,No uncontolled recursion because of failsafe,False,False,
+CASTLE-761-1,True,761,String search buffer stepping causes free function to be called on non-buffer start pointer.,False,False,
+CASTLE-761-10,False,761,Buffer pointer operation does not cause the free function to be called on non-buffer start pointer.,False,False,
+CASTLE-761-2,True,761,Buffer pointer operation causes free function to be called on non-buffer start pointer.,False,False,
+CASTLE-761-3,True,761,Stepping by another pointer causes free function to be called on non-buffer start pointer,False,False,
+CASTLE-761-4,True,761,Swapping pointers causes free function to be called on non-buffer start pointer,False,False,
+CASTLE-761-5,True,761,Buffer pointer operation causes free function to be called on non-buffer start pointer,False,False,
+CASTLE-761-6,True,761,"Conditional, but always true buffer pointer operation causes free function to be called on non-buffer start pointer",True,False,416
+CASTLE-761-7,False,761,String search buffer stepping does not cause free function to be called on non-buffer start pointer.,False,False,
+CASTLE-761-8,False,761,The pointer at the start of the buffer is freed correctly,False,False,
+CASTLE-761-9,False,761,Not swapping the pointers does not cause the free function to be called on non-buffer start pointer,False,False,
+CASTLE-770-1,True,770,Server allocates process resources without limiting concurrent connections.,False,False,
+CASTLE-770-10,False,770,Memory is freed after it is allocated for a client buffer,False,False,
+CASTLE-770-2,True,770,Network write to file without limits or throttling.,False,False,
+CASTLE-770-3,True,770,Program allocates memory without properly limiting size,False,False,
+CASTLE-770-4,True,770,Unlimited incrementation of buffer size may cause memory exhaustion.,False,False,
+CASTLE-770-5,True,770,Unlimited forking during connection handling may cause memory exhaustion.,False,False,
+CASTLE-770-6,True,770,Unlimited forking during connection handling may cause memory exhaustion.,False,False,
+CASTLE-770-7,False,770,Unlimited incrementation of buffer is avoided due to buffer size limit,False,False,
+CASTLE-770-8,False,770,The server limits the concurrently available processes.,False,False,
+CASTLE-770-9,False,770,Program allocates memory with propper limits,False,False,
+CASTLE-78-1,True,78,Missing input validation of fgets input allows for OS command injection,False,False,
+CASTLE-78-10,False,78,Input is sufficienty validated before being used in a command.,True,True,22
+CASTLE-78-2,True,78,Missing input validation of command line arguments allows for OS command injection,True,True,78
+CASTLE-78-3,True,78,Missing input validation of command line arguments allows for OS command injection,True,True,78
+CASTLE-78-4,True,78,Missing input validation of fgets input allows for OS command injection,True,True,78
+CASTLE-78-5,True,78,The test case exposes an OS Command Injection in scope complexity.,False,False,
+CASTLE-78-6,True,78,Missing input validation of fgets input allows for OS command injection,False,False,
+CASTLE-78-7,False,78,OS command input is verified sufficiently.,False,False,
+CASTLE-78-8,False,78,fgets input validated correcly disallowing OS command injection,False,False,
+CASTLE-78-9,False,78,Input is sufficienty validated before being used in a command.,False,False,
+CASTLE-787-1,True,787,Buffer overflow in scanf function.,True,False,120
+CASTLE-787-10,False,787,The array is not indexed out of bounds,True,True,457
+CASTLE-787-2,True,787,Buffer overflow in strcpy function.,True,False,119
+CASTLE-787-3,True,787,Buffer overflow in strcpy function.,True,False,120
+CASTLE-787-4,True,787,"Buffer overflow in scanf, fscanf and gets functions.",True,False,119
+CASTLE-787-5,True,787,Buffer overflow in scanf functions.,True,False,119
+CASTLE-787-6,True,787,Writing outside of array bounds due to wrong array length calculation,True,False,121
+CASTLE-787-7,False,787,"Not vulnerable, since memory allocation is properly null-checked.",False,False,
+CASTLE-787-8,False,787,Both scanf and malloc functions are handled properly.,False,False,
+CASTLE-787-9,False,787,Password length is bounded below buffer length.,False,False,
+CASTLE-798-1,True,798,The AES key is hard-coded.,True,False,200
+CASTLE-798-10,False,798,The Google Maps API token is not a secret. It is publicly accessible embedded into the web page.,True,True,200
+CASTLE-798-2,True,798,The password is hard coded into the function.,False,False,
+CASTLE-798-3,True,798,Hard-coded database password.,False,False,
+CASTLE-798-4,True,798,Hard-coded GitHub token in curl request.,True,False,522
+CASTLE-798-5,True,798,Hard coded admin token.,False,False,
+CASTLE-798-6,True,798,Hard-coded password as a hash.,True,False,119
+CASTLE-798-7,False,798,AWS credentials are loaded from environment variables.,False,False,
+CASTLE-798-8,False,798,Admin token is loaded from the database.,True,True,89
+CASTLE-798-9,False,798,The AES key is correctly read from a file.,False,False,
+CASTLE-822-1,True,822,Changing the pointer relies on undefined behaviour.,True,False,416|787
+CASTLE-822-10,False,822,"Obtaining value from socket instead of dereferncing avoids segmentation fault (echo ""0"" | nc localhost 8080)",False,False,
+CASTLE-822-2,True,822,Untrusted pointer dereference in one layer of abstraction causes segmentation fault.,True,False,788
+CASTLE-822-3,True,822,Untrusted pointer dereference after addition causes IO trap.,True,False,125
+CASTLE-822-4,True,822,Dereferencing untrusted pointer read from file causes segmentation fault,True,False,125
+CASTLE-822-5,True,822,Dereferencing untrusted pointer read from environment variable causes segmentation fault,True,False,200
+CASTLE-822-6,True,822,Dereferencing untrusted pointer received from client causes segmentation fault,True,False,787
+CASTLE-822-7,False,822,Function does not dereference untrusted pointer,False,False,
+CASTLE-822-8,False,822,The dereferenced pointer is not untrusted,False,False,
+CASTLE-822-9,False,822,The dereferenced pointer is trusted,False,False,
+CASTLE-835-1,True,835,Simple example of a hard-coded infinite loop,False,False,
+CASTLE-835-10,False,835,No infinte loop because the function will eventually return false,False,False,
+CASTLE-835-2,True,835,Infinite loop because of a missing increment,False,False,
+CASTLE-835-3,True,835,Infinite loop because of a missing increment,True,False,400
+CASTLE-835-4,True,835,Infinite loop because of a decremented iterator,False,False,
+CASTLE-835-5,True,835,Infinite loop because of incorrect iteration,False,False,
+CASTLE-835-6,True,835,Infinite loop because of incorrect iteration,False,False,
+CASTLE-835-7,False,835,No infinte loop because the hard-coded condition is false,False,False,
+CASTLE-835-8,False,835,No infinite loop because the iteration is correct,False,False,
+CASTLE-835-9,False,835,No infinite loop because the modulo cutoff is high enough,False,False,
+CASTLE-843-1,True,843,Explicit casting of incompatible types causes type confusion.,False,False,
+CASTLE-843-10,False,843,No type confusion,False,False,
+CASTLE-843-2,True,843,Implicit casting of incompatible types causes type confusion.,False,False,
+CASTLE-843-3,True,843,Explicit casting of incompatible types causes type confusion.,False,False,
+CASTLE-843-4,True,843,Implicit casting of incompatible types causes type confusion.,False,False,
+CASTLE-843-5,True,843,Implicit casting of incompatible types causes type confusion.,False,False,
+CASTLE-843-6,True,843,Implicit casting of incompatible types causes type confusion.,False,False,
+CASTLE-843-7,False,843,Using the sqrt function from the math library does not cause type confusion,False,False,
+CASTLE-843-8,False,843,Sufficient implicit casting of compatible types avoids type confusion.,False,False,
+CASTLE-843-9,False,843,Sufficient implicit casting of compatible types avoids type confusion.,False,False,
+CASTLE-89-1,True,89,Missing input validation of fgets input allows for SQL injection.,False,False,
+CASTLE-89-10,False,89,Static input to SQL query does not allow for SQL injection.,False,False,
+CASTLE-89-2,True,89,Insufficient inpit validation of fgets input allows for SQL injection.,True,True,89
+CASTLE-89-3,True,89,Missing input validation of fgets input allows for SQL injection.,False,False,
+CASTLE-89-4,True,89,Missing input validation of fgets input allows for SQL injection.,True,True,89
+CASTLE-89-5,True,89,Insufficient input validation of fgets input allows for SQL injection.,True,True,89
+CASTLE-89-6,True,89,Insufficient input validation hidden in subfunction allows for SQL injection.,True,True,89
+CASTLE-89-7,False,89,Static SQL query is not vulnerable to injection.,False,False,
+CASTLE-89-8,False,89,Sufficient ingteger valudation of parameter ID does not allow for SQL injection,False,False,
+CASTLE-89-9,False,89,Sufficient ingteger valudation of parameter ID does not allow for SQL injection,False,False,

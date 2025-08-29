@@ -1,0 +1,15 @@
+CASTLE Benchmark — Scoring Summary
+
+Total tests: 250
+
+Task A — ANY ALERT (vulnerability detection without CWE consideration):
+
+  Confusion: TP=52 FP=11 TN=89 FN=98
+
+  Metrics:   Acc=0.5640  TPR=0.3467  TNR=0.8900  FPR=0.1100  FNR=0.6533  P/PPV=0.8254  NPV=0.4759  F1=0.4883  MCC=0.2670  BalAcc=0.6183  YoudenJ=0.2367
+
+Task B — CWE-AWARE (requires correct CWE identification for positive tests):
+
+  Confusion: TP=26 FP=11 TN=89 FN=124
+
+  Metrics:   Acc=0.4600  TPR=0.1733  TNR=0.8900  FPR=0.1100  FNR=0.8267  P/PPV=0.7027  NPV=0.4178  F1=0.2781  MCC=0.0874  BalAcc=0.5317  YoudenJ=0.0633
