@@ -1,0 +1,15 @@
+OWASP Benchmark Java — Scoring Summary
+
+Total tests: 2740
+
+Task A — ANY ALERT (нашёл уязвимость без учёта CWE):
+
+  Confusion: TP=848 FP=388 TN=937 FN=567
+
+  Metrics:   Acc=0.6515  TPR=0.5993  TNR=0.7072  FPR=0.2928  FNR=0.4007  P/PPV=0.6861  NPV=0.6230  F1=0.6398  MCC=0.3078  BalAcc=0.6532  YoudenJ=0.3065  OWASP=30.65
+
+Task B — CWE-AWARE (для позитивных тестов требуется совпадение CWE):
+
+  Confusion: TP=785 FP=388 TN=937 FN=630
+
+  Metrics:   Acc=0.6285  TPR=0.5548  TNR=0.7072  FPR=0.2928  FNR=0.4452  P/PPV=0.6692  NPV=0.5980  F1=0.6066  MCC=0.2645  BalAcc=0.6310  YoudenJ=0.2619  OWASP=26.19

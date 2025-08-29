@@ -11,3 +11,4 @@ ollama
 #benchmarks only
 semgrep
 bandit
+pandas

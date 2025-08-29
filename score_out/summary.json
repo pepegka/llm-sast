@@ -1,0 +1,99 @@
+{
+  "total_tests": 2740,
+  "json_files": [
+    "../Downloads/sast_report_20250812_220408.json"
+  ],
+  "sarif_files": [],
+  "global": {
+    "any_alert": {
+      "confusion": {
+        "TP": 848,
+        "FP": 388,
+        "TN": 937,
+        "FN": 567
+      },
+      "metrics": {
+        "total": 2740,
+        "pos_support": 1415,
+        "neg_support": 1325,
+        "accuracy": 0.6514598540145985,
+        "tpr_recall_sensitivity": 0.5992932862190813,
+        "tnr_specificity": 0.7071698113207547,
+        "fpr": 0.29283018867924526,
+        "fnr": 0.4007067137809187,
+        "precision_ppv": 0.686084142394822,
+        "npv": 0.6230053191489362,
+        "f1": 0.6397585816672953,
+        "f0_5": 0.666771504953609,
+        "f2": 0.6148491879350348,
+        "prevalence": 0.5164233576642335,
+        "predicted_positive_rate": 0.4510948905109489,
+        "predicted_negative_rate": 0.5489051094890511,
+        "fdr": 0.313915857605178,
+        "for": 0.37699468085106386,
+        "threat_score": 0.47032723239046037,
+        "mcc": 0.30777347806726324,
+        "balanced_accuracy": 0.6532315487699181,
+        "youden_j": 0.30646309753983614,
+        "g_mean": 0.6510008603230435,
+        "lr_plus": 2.0465556810316565,
+        "lr_minus": 0.5666343604692821,
+        "diagnostic_odds_ratio": 3.611774759541083,
+        "cohens_kappa": 0.3051520768164509,
+        "markedness": 0.30908946154375805,
+        "owasp_score": 30.646309753983616
+      }
+    },
+    "cwe_aware": {
+      "confusion": {
+        "TP": 785,
+        "FP": 388,
+        "TN": 937,
+        "FN": 630
+      },
+      "metrics": {
+        "total": 2740,
+        "pos_support": 1415,
+        "neg_support": 1325,
+        "accuracy": 0.6284671532846715,
+        "tpr_recall_sensitivity": 0.5547703180212014,
+        "tnr_specificity": 0.7071698113207547,
+        "fpr": 0.29283018867924526,
+        "fnr": 0.44522968197879864,
+        "precision_ppv": 0.6692242114236999,
+        "npv": 0.5979578813018507,
+        "f1": 0.606646058732612,
+        "f0_5": 0.642705092516784,
+        "f2": 0.5744182643055757,
+        "prevalence": 0.5164233576642335,
+        "predicted_positive_rate": 0.4281021897810219,
+        "predicted_negative_rate": 0.5718978102189781,
+        "fdr": 0.3307757885763001,
+        "for": 0.4020421186981493,
+        "threat_score": 0.4353854686633389,
+        "mcc": 0.26454812780737125,
+        "balanced_accuracy": 0.630970064670978,
+        "youden_j": 0.2619401293419561,
+        "g_mean": 0.6263519945856388,
+        "lr_plus": 1.8945120396342574,
+        "lr_minus": 0.6295937338547579,
+        "diagnostic_odds_ratio": 3.0091024382261495,
+        "cohens_kappa": 0.2604274657764885,
+        "markedness": 0.2671820927255506,
+        "owasp_score": 26.19401293419561
+      }
+    }
+  },
+  "outputs": {
+    "metrics_global_csv": "score_out/metrics_global.csv",
+    "per_test_csv": "score_out/per_test.csv",
+    "metrics_by_cwe_csv": "score_out/metrics_by_cwe.csv",
+    "metrics_by_cwe_any_alert_csv": "score_out/metrics_by_cwe_any_alert.csv",
+    "metrics_by_cwe_cwe_aware_csv": "score_out/metrics_by_cwe_cwe_aware.csv",
+    "metrics_by_category_csv": "score_out/metrics_by_category.csv",
+    "metrics_by_category_any_alert_csv": "score_out/metrics_by_category_any_alert.csv",
+    "metrics_by_category_cwe_aware_csv": "score_out/metrics_by_category_cwe_aware.csv",
+    "summary_txt": "score_out/summary.txt",
+    "summary_json": "score_out/summary.json"
+  }
+}
